@@ -17,8 +17,9 @@ namespace CalcPercent
                 decimal newValue = Convert.ToDecimal(txtNewValue.Text);
 
                 decimal returnPercentage = ((newValue - oldValue) / oldValue) * 100;
+                decimal sub = newValue - oldValue;
 
-                lblResult.Text = $"Sonuç: %{returnPercentage:F2}";
+                lblResult.Text = $"{sub:F2} (%{returnPercentage:F2})";
             }
             catch (Exception ex)
             {
@@ -34,6 +35,7 @@ namespace CalcPercent
                 string resultName = txtResultName.Text;
                 decimal oldValue = Convert.ToDecimal(txtOldValue.Text);
                 decimal newValue = Convert.ToDecimal(txtNewValue.Text);
+                decimal sub = newValue - oldValue;
                 decimal result = ((newValue - oldValue) / oldValue) * 100;
                 string currentDate = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"); // Current date and time
 
@@ -43,7 +45,7 @@ namespace CalcPercent
                     return;
                 }
 
-                string dataToSave = $"{resultName},{oldValue},{newValue},{result:F2},{currentDate}";
+                string dataToSave = $"{resultName},{oldValue},{newValue},{sub},{result:F2},{currentDate}";
 
                 string filePath = "SavedResults.txt"; // File path
                 File.AppendAllText(filePath, dataToSave + Environment.NewLine);
@@ -80,15 +82,16 @@ namespace CalcPercent
                 dataTable.Columns.Add("Name");
                 dataTable.Columns.Add("Old Value");
                 dataTable.Columns.Add("New Value");
+                dataTable.Columns.Add("Sub");
                 dataTable.Columns.Add("Result (%)");
                 dataTable.Columns.Add("Date");
 
                 foreach (var line in lines)
                 {
                     var parts = line.Split(',');
-                    if (parts.Length == 5)
+                    if (parts.Length == 6)
                     {
-                        dataTable.Rows.Add(parts[0], parts[1], parts[2], parts[3], parts[4]);
+                        dataTable.Rows.Add(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
                     }
                 }
 
