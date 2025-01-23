@@ -84,18 +84,24 @@ namespace CalcPercent
                 dataTable.Columns.Add("New Value");
                 dataTable.Columns.Add("Sub");
                 dataTable.Columns.Add("Result (%)");
-                dataTable.Columns.Add("Date");
+                dataTable.Columns.Add("Date", typeof(DateTime));
 
                 foreach (var line in lines)
                 {
                     var parts = line.Split(',');
                     if (parts.Length == 6)
                     {
-                        dataTable.Rows.Add(parts[0], parts[1], parts[2], parts[3], parts[4], parts[5]);
+                        if (DateTime.TryParse(parts[5], out DateTime date))
+                        {
+                            dataTable.Rows.Add(parts[0], parts[1], parts[2], parts[3], parts[4], date);
+                        }
                     }
                 }
 
-                dgvResults.DataSource = dataTable;
+                var dataView = dataTable.DefaultView;
+                dataView.Sort = "Date DESC";
+
+                dgvResults.DataSource = dataView.ToTable();
             }
             catch (Exception ex)
             {

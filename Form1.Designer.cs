@@ -134,12 +134,12 @@
             dataGridViewCellStyle3.WrapMode = DataGridViewTriState.True;
             dgvResults.RowHeadersDefaultCellStyle = dataGridViewCellStyle3;
             dgvResults.RowHeadersWidth = 62;
-            dgvResults.Size = new Size(934, 293);
+            dgvResults.Size = new Size(1159, 385);
             dgvResults.TabIndex = 6;
             // 
             // btnLoadResults
             // 
-            btnLoadResults.Location = new Point(676, 153);
+            btnLoadResults.Location = new Point(901, 154);
             btnLoadResults.Name = "btnLoadResults";
             btnLoadResults.Size = new Size(270, 31);
             btnLoadResults.TabIndex = 7;
@@ -151,7 +151,7 @@
             // 
             AutoScaleDimensions = new SizeF(10F, 25F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(958, 505);
+            ClientSize = new Size(1183, 597);
             Controls.Add(btnLoadResults);
             Controls.Add(dgvResults);
             Controls.Add(btnSave);
