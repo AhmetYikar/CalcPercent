@@ -1,0 +1,1985 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Arsenal Tree — Silah Envanteri Demo</title>
+<style>
+  :root{
+    --bg:#0b0f14;
+    --panel:#121821;
+    --line:#2a3648;
+    --text:#e6edf3;
+    --muted:#8a97a8;
+    --accent:#f0b429;
+    --accent-2:#7dd3fc;
+    --good:#22c55e;
+    --locked:#3a4150;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;background:#05080c;color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,sans-serif}
+  body{
+    min-height:100vh;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:24px;
+    background:
+      radial-gradient(1200px 600px at 20% -10%, #1a2330 0%, transparent 60%),
+      radial-gradient(900px 500px at 90% 110%, #0f1a26 0%, transparent 60%),
+      #05080c;
+  }
+
+  /* Phone frame */
+  .phone{
+    width:390px;height:820px;background:var(--bg);border-radius:42px;
+    box-shadow:0 0 0 10px #1c1f24,0 0 0 12px #2a2e35,0 30px 80px rgba(0,0,0,.6);
+    position:relative;overflow:hidden;display:flex;flex-direction:column;
+  }
+  .notch{
+    position:absolute;top:10px;left:50%;transform:translateX(-50%);
+    width:120px;height:28px;background:#000;border-radius:0 0 18px 18px;z-index:30;
+  }
+  .status{
+    height:44px;display:flex;align-items:flex-end;justify-content:space-between;
+    padding:0 22px 6px;font-size:12px;color:var(--muted);
+  }
+  .header{padding:8px 18px 12px;display:flex;align-items:center;gap:12px}
+  .avatar{width:42px;height:42px;border-radius:50%;
+    background:linear-gradient(135deg,#3a4256,#0f141c);
+    display:grid;place-items:center;font-size:20px;border:1px solid #2a3445}
+  .h-meta{flex:1;min-width:0}
+  .h-meta .name{font-weight:700;font-size:14px}
+  .h-meta .lvl{font-size:11px;color:var(--muted)}
+  .xp{height:6px;background:#1b2330;border-radius:99px;margin-top:6px;overflow:hidden}
+  .xp > i{display:block;height:100%;width:62%;background:linear-gradient(90deg,var(--accent),#fff3a0)}
+  .coin{display:flex;align-items:center;gap:6px;background:#19222f;border:1px solid #233040;
+    padding:6px 10px;border-radius:99px;font-size:12px;font-weight:600}
+  .coin .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent)}
+
+  .tabs{display:flex;gap:8px;padding:4px 14px 10px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;background:var(--panel);border:1px solid #1f2937;
+    color:var(--text);border-radius:14px;padding:8px 12px;font-size:12px;
+    display:flex;align-items:center;gap:8px;cursor:pointer;transition:.15s}
+  .tab:hover{transform:translateY(-1px)}
+  .tab.active{background:linear-gradient(180deg,#2a3447,#1a2433);border-color:#3a4a66;
+    box-shadow:0 0 0 2px rgba(125,211,252,.15)}
+  .tab .flag{font-size:16px}
+  .tab .lock{font-size:10px;color:var(--muted)}
+
+  /* Kategori chip seri */
+  .cat-chips{
+    display:flex;gap:6px;padding:0 14px 6px;overflow-x:auto;scrollbar-width:none;
+  }
+  .cat-chips::-webkit-scrollbar{display:none}
+  .chip{
+    flex:0 0 auto;background:#0e1622;border:1px solid #1d2839;color:var(--muted);
+    border-radius:99px;padding:5px 10px;font-size:11.5px;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;gap:5px;transition:.15s;
+  }
+  .chip:hover{border-color:#3a4a66;color:var(--text)}
+  .chip.active{
+    background:rgba(240,180,41,.12);border-color:rgba(240,180,41,.55);color:var(--accent);
+  }
+  .chip .ico{font-size:13px}
+  .chip .ct{font-size:10px;color:var(--muted);background:#0a0f17;
+    border-radius:99px;padding:1px 6px;margin-left:2px}
+  .chip.active .ct{color:var(--accent);background:rgba(240,180,41,.15)}
+
+  .section{display:flex;align-items:baseline;justify-content:space-between;padding:6px 18px}
+  .section h2{margin:0;font-size:15px;letter-spacing:.3px}
+  .section .sub{font-size:11px;color:var(--muted)}
+  .section .hint{font-size:10px;color:var(--muted)}
+
+  /* Scrollable tree area */
+  .tree-wrap{
+    flex:1;overflow:auto;position:relative;padding:0 0 90px;
+    background:
+      radial-gradient(circle at 20% 0, rgba(240,180,41,.04), transparent 40%),
+      radial-gradient(circle at 80% 100%, rgba(125,211,252,.04), transparent 40%);
+    touch-action:pan-x pan-y; /* pinch handled manually */
+  }
+  .tree-wrap::-webkit-scrollbar{height:6px;width:6px}
+  .tree-wrap::-webkit-scrollbar-thumb{background:#2a3445;border-radius:99px}
+
+  /* zoomer: takes scaled space; canvas inside has transform applied */
+  .zoomer{
+    position:relative;
+    transform-origin:0 0;
+  }
+  .canvas{
+    position:relative;
+    transform-origin:0 0;
+    padding:14px 18px 30px 56px;
+  }
+
+  /* floating zoom controls */
+  .zoom-ctl{
+    position:absolute;right:12px;bottom:80px;z-index:12;
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .zoom-ctl button{
+    width:34px;height:34px;border-radius:10px;border:1px solid #2a3a55;
+    background:rgba(15,23,33,.85);backdrop-filter:blur(6px);
+    color:var(--text);font-size:16px;font-weight:700;cursor:pointer;
+    display:grid;place-items:center;
+    box-shadow:0 4px 10px rgba(0,0,0,.4);
+  }
+  .zoom-ctl button:active{transform:translateY(1px)}
+  .zoom-pct{
+    font-size:9px;color:var(--muted);text-align:center;
+    background:rgba(15,23,33,.85);border:1px solid #2a3a55;border-radius:8px;
+    padding:3px 0;font-weight:700;letter-spacing:.5px;
+  }
+
+  /* Year axis on the left */
+  .yaxis{
+    position:absolute;top:14px;left:0;width:50px;height:calc(100% - 44px);
+    pointer-events:none;
+  }
+  .yline{
+    position:absolute;left:38px;top:0;bottom:0;width:2px;
+    background:linear-gradient(180deg,transparent,#2a3445 8%,#2a3445 92%,transparent);
+  }
+  .ytick{
+    position:absolute;left:0;width:50px;text-align:right;padding-right:14px;
+    font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.5px;
+    transform:translateY(-50%);
+  }
+  .ytick::after{
+    content:"";position:absolute;right:8px;top:50%;width:8px;height:2px;background:#3a4a66;
+    transform:translateY(-50%);
+  }
+
+  /* SVG layer (lines) sits behind nodes */
+  .links{
+    position:absolute;left:56px;top:14px;pointer-events:none;overflow:visible;
+  }
+  .link{
+    fill:none;stroke:#3a4a66;stroke-width:2;
+  }
+  .link.owned{stroke:url(#g-owned);stroke-width:2.5}
+  .link.locked{stroke:#1f2a3b;stroke-dasharray:3 5}
+
+  /* Nodes positioned absolutely */
+  .nbox{
+    position:absolute;
+    width:124px;
+    background:linear-gradient(180deg,#1a2330,#121a26);
+    border:1px solid #243248;border-radius:12px;
+    padding:8px 9px 9px;cursor:pointer;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+  }
+  .nbox:hover{transform:translateY(-2px);border-color:#4a607d;box-shadow:0 8px 20px rgba(0,0,0,.45)}
+  .nbox.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(240,180,41,.25)}
+  .nbox .img-wrap{
+    width:100%;height:54px;border-radius:8px;
+    background:radial-gradient(circle at 50% 60%, #182234, #0a0f17 80%);
+    border:1px solid #1f2a3b;
+    display:grid;place-items:center;overflow:hidden;
+    margin-bottom:6px;
+  }
+  .nbox .img-wrap img{
+    max-width:96%;max-height:96%;object-fit:contain;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));
+  }
+  .nbox .img-wrap .emoji{font-size:22px}
+  .nbox .nm{font-size:11.5px;font-weight:700;line-height:1.15;letter-spacing:.2px}
+  .nbox .yr{font-size:10px;color:var(--muted);margin-top:2px}
+  .nbox .cal{
+    display:inline-block;margin-top:6px;font-size:9.5px;color:#cfd6e0;
+    background:#0e1622;border:1px solid #1f2a3b;border-radius:5px;padding:1px 5px;
+  }
+  .nbox.locked{
+    background:repeating-linear-gradient(45deg,#0e131b,#0e131b 6px,#0b1018 6px,#0b1018 12px);
+    color:#5a6779;border-color:#1d2533;cursor:not-allowed;
+  }
+  .nbox.locked .img-wrap img{filter:grayscale(1) opacity(.4)}
+  .nbox.locked .nm::after{content:" 🔒"}
+
+  /* mastery: master (★ altın) */
+  .nbox.master{border-color:rgba(240,180,41,.55)}
+  .nbox.master::before{
+    content:"";position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
+    background:linear-gradient(180deg,#fde047,#f0b429);
+    border:2px solid var(--bg);box-shadow:0 0 8px rgba(240,180,41,.5);
+  }
+  .nbox.master::after{
+    content:"★";position:absolute;top:-7px;right:-1.5px;font-size:11px;font-weight:800;color:#1b1300;
+  }
+  /* mastery: field (⚡ mavi) */
+  .nbox.field{border-color:rgba(125,211,252,.45)}
+  .nbox.field::before{
+    content:"";position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:50%;
+    background:linear-gradient(180deg,#7dd3fc,#0ea5e9);
+    border:2px solid var(--bg);
+  }
+  .nbox.field::after{
+    content:"⚡";position:absolute;top:-7px;right:-1px;font-size:9.5px;color:#06203a;font-weight:800;
+  }
+
+  /* mastery progress bar */
+  .mbar{
+    height:4px;background:#0d141e;border-radius:99px;
+    margin-top:6px;overflow:hidden;
+    border:1px solid #1f2a3b;
+  }
+  .mbar > i{
+    display:block;height:100%;width:0;
+    background:linear-gradient(90deg,#7dd3fc,#f0b429);
+    transition:width .5s ease;
+  }
+  .nbox.master .mbar > i{background:linear-gradient(90deg,#f0b429,#fde047)}
+  .nbox.field .mbar > i{background:linear-gradient(90deg,#7dd3fc,#0ea5e9)}
+  .nbox.locked .mbar{display:none}
+
+  /* sheet'teki büyük ustalık çubuğu */
+  .mbar.big{height:8px;margin-top:0}
+  .mhint{font-size:11.5px;color:var(--muted);margin-top:6px;text-align:center}
+  .mhint strong{color:var(--accent)}
+
+  .nbox.featured{box-shadow:0 0 0 1px rgba(240,180,41,.25), 0 4px 12px rgba(240,180,41,.12)}
+
+  /* Bottom nav */
+  .nav{
+    position:absolute;bottom:0;left:0;right:0;
+    display:grid;grid-template-columns:repeat(5,1fr);
+    background:rgba(8,12,18,.85);backdrop-filter:blur(10px);
+    border-top:1px solid #1a2230;padding:8px 4px 18px;z-index:10;
+  }
+  .nav .item{display:flex;flex-direction:column;align-items:center;gap:2px;
+    color:var(--muted);font-size:10px;cursor:pointer}
+  .nav .item.active{color:var(--accent)}
+  .nav .item .ico{font-size:18px}
+
+  /* Details sheet */
+  .sheet{
+    position:absolute;left:0;right:0;bottom:0;
+    background:linear-gradient(180deg,#131c28,#0c121a);
+    border-top:1px solid #233045;border-radius:22px 22px 0 0;
+    padding:14px 16px 90px;transform:translateY(105%);
+    transition:transform .35s cubic-bezier(.2,.8,.2,1);
+    z-index:20;max-height:78%;overflow-y:auto;
+  }
+  .sheet.open{transform:translateY(0)}
+  .sheet .grab{width:48px;height:4px;border-radius:99px;background:#2c3a52;margin:0 auto 10px}
+  .sheet h3{margin:0 0 2px;font-size:18px}
+  .sheet .sub{color:var(--muted);font-size:12px;margin-bottom:12px}
+  .specs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .spec{background:#0f1722;border:1px solid #1d2839;border-radius:10px;padding:8px 10px}
+  .spec .k{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .spec .v{font-size:13px;font-weight:700;margin-top:2px}
+  .lineage{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;
+    background:#0e1622;border:1px solid #1d2839;border-radius:10px;padding:8px 10px;margin-top:6px}
+  .lineage .arrow{color:var(--muted)}
+  .lineage .me{color:var(--accent);font-weight:700}
+  .desc{font-size:12.5px;line-height:1.5;color:#cfd6e0;margin-top:8px}
+  .users{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .users span{background:#152033;border:1px solid #243149;border-radius:99px;padding:4px 8px;font-size:11px}
+  .actions{display:flex;gap:8px;margin-top:14px}
+  .btn{flex:1;text-align:center;padding:10px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer}
+  .btn.primary{background:var(--accent);color:#1b1300}
+  .btn.ghost{background:transparent;border:1px solid #2c3a52;color:var(--text)}
+  .close{position:absolute;top:10px;right:14px;background:#1a2433;border:1px solid #2c3a52;
+    border-radius:50%;width:30px;height:30px;display:grid;place-items:center;cursor:pointer;color:var(--text)}
+
+  .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);
+    opacity:0;pointer-events:none;transition:opacity .25s;z-index:15}
+  .backdrop.show{opacity:1;pointer-events:auto}
+  .toast{position:absolute;left:50%;bottom:90px;transform:translate(-50%,30px);
+    background:#162033;border:1px solid #2a3a55;color:var(--text);
+    padding:8px 14px;border-radius:99px;font-size:12px;
+    opacity:0;transition:all .3s;z-index:25}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  /* ===== Overlay screens (Quiz, Compare) ===== */
+  .screen{
+    position:absolute;left:0;right:0;top:0;bottom:0;
+    background:linear-gradient(180deg,#0c1219,#06090e);
+    z-index:18;display:flex;flex-direction:column;
+    padding-bottom:74px;
+  }
+  .screen[hidden]{display:none}
+  .screen-head{
+    padding:46px 18px 12px;border-bottom:1px solid #1a2230;
+    background:linear-gradient(180deg,#121a26,#0c1219);
+  }
+  .screen-title{display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700}
+  .screen-title .ico{font-size:18px}
+  .qprogress{height:6px;background:#1b2330;border-radius:99px;margin-top:12px;overflow:hidden}
+  .qprogress > i{display:block;height:100%;width:10%;background:linear-gradient(90deg,var(--accent),#fff3a0);transition:width .35s}
+  .qmeta,.cmeta{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px}
+
+  /* Quiz body */
+  .qbody{flex:1;overflow-y:auto;padding:14px 18px}
+  .qcard{
+    background:linear-gradient(180deg,#1a2330,#121a26);
+    border:1px solid #243248;border-radius:14px;
+    padding:14px;margin-bottom:14px;
+  }
+  .qphoto{
+    width:100%;height:140px;border-radius:10px;
+    background:radial-gradient(circle at 50% 60%, #182234, #0a0f17 80%);
+    border:1px solid #1f2a3b;display:grid;place-items:center;overflow:hidden;
+  }
+  .qphoto img{max-width:92%;max-height:92%;object-fit:contain;
+    filter:drop-shadow(0 3px 8px rgba(0,0,0,.6))}
+  .qprompt{font-size:14px;font-weight:700;margin:14px 0 4px}
+  .qhint{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .qopt{
+    display:block;width:100%;text-align:left;
+    background:#0f1722;border:1px solid #1d2839;color:var(--text);
+    border-radius:10px;padding:11px 12px;margin-bottom:8px;font-size:13px;
+    cursor:pointer;transition:.15s;font-weight:600;
+  }
+  .qopt:hover{border-color:#3a4a66;background:#142033}
+  .qopt.right{background:rgba(34,197,94,.15);border-color:var(--good);color:#bef0c9}
+  .qopt.wrong{background:rgba(239,68,68,.15);border-color:var(--bad);color:#f8b9b9}
+  .qfeedback{
+    margin-top:10px;padding:10px 12px;border-radius:10px;font-size:12.5px;
+    background:#0e1622;border:1px solid #243149;display:none;
+  }
+  .qfeedback.show{display:block}
+  .qfeedback strong{color:var(--accent)}
+  .qnext{
+    width:100%;background:var(--accent);color:#1b1300;border:none;
+    border-radius:12px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;
+    margin-top:6px;
+  }
+  .qfinish{
+    text-align:center;padding:30px 18px;
+  }
+  .qfinish .big{font-size:42px;margin-bottom:6px}
+  .qfinish h3{margin:6px 0 4px}
+  .qfinish .stat{color:var(--muted);font-size:13px;margin-bottom:18px}
+  .qfinish .qprimary{
+    background:var(--accent);color:#1b1300;border:none;border-radius:12px;
+    padding:12px;font-weight:700;font-size:14px;cursor:pointer;
+    width:100%;margin-top:10px;
+  }
+  .qfinish .qsec{
+    background:transparent;color:var(--text);border:1px solid #2c3a52;
+    border-radius:12px;padding:11px;font-weight:700;font-size:13px;cursor:pointer;
+    width:100%;margin-top:8px;
+  }
+  .qfinish .unlock{
+    background:rgba(240,180,41,.1);border:1px solid rgba(240,180,41,.45);
+    border-radius:12px;padding:12px;margin:14px auto 4px;max-width:280px;
+    font-size:13px;color:var(--accent);
+  }
+  .qfinish .unlock strong{color:#fff}
+  .qfinish .progress-line{
+    color:var(--accent-2);font-size:12.5px;margin:10px 0 4px;
+  }
+
+  /* Compare body */
+  .cbody{flex:1;overflow-y:auto;padding:14px 18px}
+  .ccard{
+    background:linear-gradient(180deg,#1a2330,#121a26);
+    border:1px solid #243248;border-radius:14px;padding:12px;margin-bottom:10px;
+    position:relative;
+  }
+  .ccard.opp{border-color:#3a2a3a}
+  .ccard.win{border-color:var(--good);box-shadow:0 0 0 2px rgba(34,197,94,.2)}
+  .ccard.lose{border-color:var(--bad);box-shadow:0 0 0 2px rgba(239,68,68,.2);opacity:.85}
+  .ctag{
+    position:absolute;top:-8px;left:12px;font-size:10px;font-weight:700;
+    background:var(--accent);color:#1b1300;padding:2px 8px;border-radius:99px;
+  }
+  .ccard.opp .ctag{background:#7dd3fc;color:#0a2233}
+  .crow{display:grid;grid-template-columns:80px 1fr;gap:10px;align-items:center}
+  .cphoto{
+    width:80px;height:60px;border-radius:8px;
+    background:radial-gradient(circle at 50% 60%, #182234, #0a0f17 80%);
+    border:1px solid #1f2a3b;display:grid;place-items:center;overflow:hidden;
+  }
+  .cphoto img{max-width:90%;max-height:90%;object-fit:contain}
+  .cinfo .nm{font-weight:700;font-size:13px}
+  .cinfo .yr{font-size:11px;color:var(--muted)}
+  .cstats{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+  .cstat{
+    background:#0f1722;border:1px solid #1d2839;border-radius:8px;
+    padding:6px 8px;display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;cursor:pointer;transition:.15s;
+  }
+  .cstat:hover{border-color:#3a4a66;background:#142033}
+  .cstat.picked{border-color:var(--accent);background:rgba(240,180,41,.1)}
+  .cstat.locked{cursor:default;opacity:.7}
+  .cstat .k{color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+  .cstat .v{font-weight:700;color:var(--text)}
+  .cprompt{
+    text-align:center;color:var(--muted);font-size:12px;
+    padding:6px 0 10px;
+  }
+  .chidden .v, .chidden .nm, .chidden .yr{
+    color:transparent;text-shadow:0 0 8px #4a607d;
+  }
+  .chidden img{filter:blur(8px) opacity(.5)}
+  .cresult{
+    text-align:center;padding:6px 14px;border-radius:10px;
+    font-size:13px;font-weight:700;margin:6px 0;
+  }
+  .cresult.win{background:rgba(34,197,94,.15);color:#7af0a0;border:1px solid rgba(34,197,94,.3)}
+  .cresult.lose{background:rgba(239,68,68,.15);color:#f8a8a8;border:1px solid rgba(239,68,68,.3)}
+  .cresult.tie{background:#162033;color:var(--muted);border:1px solid #2a3a55}
+  .cnext{
+    width:100%;background:var(--accent);color:#1b1300;border:none;
+    border-radius:12px;padding:12px;font-weight:700;font-size:14px;cursor:pointer;margin-top:6px;
+  }
+
+  /* Türkiye sayfası */
+  .tr-head{
+    display:flex;align-items:center;gap:14px;
+    background:linear-gradient(180deg,#2d0d0d,#0c1219);
+    border-bottom:1px solid #3a1a1a;
+  }
+  .tr-flag{font-size:38px}
+  .tr-title{font-size:17px;font-weight:800;letter-spacing:.3px}
+  .tr-sub{font-size:11px;color:var(--muted);margin-top:2px}
+  .tr-body{flex:1;overflow-y:auto;padding:12px 14px}
+
+  .tr-summary{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;
+  }
+  .tr-stat{
+    background:linear-gradient(180deg,#1a2330,#121a26);
+    border:1px solid #243248;border-radius:12px;padding:8px 10px;
+    text-align:center;
+  }
+  .tr-stat .v{font-size:18px;font-weight:800;color:var(--accent)}
+  .tr-stat .k{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+
+  .tr-cat{
+    background:linear-gradient(180deg,#1a2330,#121a26);
+    border:1px solid #243248;border-radius:14px;
+    padding:12px;margin-bottom:10px;cursor:pointer;
+    transition:.15s;
+  }
+  .tr-cat:hover{border-color:#4a607d;transform:translateY(-1px)}
+  .tr-cat-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .tr-cat-head .ico{font-size:20px}
+  .tr-cat-head .lbl{font-size:14px;font-weight:700;flex:1}
+  .tr-cat-head .arr{color:var(--muted);font-size:14px}
+  .tr-cat-fam{font-size:11px;color:var(--muted);margin-bottom:8px}
+  .tr-cat-prog{
+    height:6px;background:#0d141e;border-radius:99px;overflow:hidden;
+    border:1px solid #1f2a3b;margin-bottom:6px;
+  }
+  .tr-cat-prog > i{display:block;height:100%;
+    background:linear-gradient(90deg,#7dd3fc,#f0b429);
+    transition:width .5s;
+  }
+  .tr-cat-meta{display:flex;justify-content:space-between;font-size:10.5px;color:var(--muted)}
+  .tr-cat-meta strong{color:var(--text)}
+  .tr-mini-row{
+    display:flex;gap:5px;margin-top:8px;flex-wrap:wrap;
+  }
+  .tr-mini{
+    width:32px;height:32px;border-radius:8px;
+    background:#0e1622;border:1px solid #1f2a3b;
+    display:grid;place-items:center;font-size:14px;
+    overflow:hidden;
+  }
+  .tr-mini.master{border-color:rgba(240,180,41,.6);background:rgba(240,180,41,.08)}
+  .tr-mini.field{border-color:rgba(125,211,252,.45)}
+  .tr-mini.locked{opacity:.4;filter:grayscale(1)}
+  .tr-mini img{max-width:90%;max-height:90%;object-fit:contain}
+
+  .tr-banner{
+    background:linear-gradient(135deg,rgba(240,180,41,.18),rgba(125,211,252,.14));
+    border:1px solid rgba(240,180,41,.35);
+    border-radius:14px;padding:12px 14px;margin-bottom:14px;
+  }
+  .tr-banner .t{font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px}
+  .tr-banner .b{font-size:12px;color:#cfd6e0;line-height:1.45}
+
+  .caption{color:#6a7585;font-size:12px;margin-top:14px;text-align:center}
+</style>
+</head>
+<body>
+
+<div class="phone" id="phone">
+  <div class="notch"></div>
+
+  <div class="status">
+    <span>9:41</span>
+    <span>● ● ●  4G  ▮▮▮</span>
+  </div>
+
+  <div class="header">
+    <div class="avatar">🎖️</div>
+    <div class="h-meta">
+      <div class="name">Komutan Ahmet</div>
+      <div class="lvl">Seviye 7 · Çavuş</div>
+      <div class="xp"><i></i></div>
+    </div>
+    <div class="coin"><span class="dot"></span> 1 240</div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+
+  <div class="cat-chips" id="catChips"></div>
+
+  <div class="section">
+    <h2 id="treeTitle">Tüfek Ağacı</h2>
+    <span class="hint">↕ kaydır · ↔ kaydır</span>
+  </div>
+
+  <div class="tree-wrap" id="treeWrap">
+    <div class="zoomer" id="zoomer">
+      <div class="canvas" id="canvas">
+        <div class="yaxis" id="yaxis"><div class="yline"></div></div>
+        <svg class="links" id="links" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="g-owned" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#22c55e"/>
+              <stop offset="1" stop-color="#f0b429"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div id="nodes"></div>
+      </div>
+    </div>
+
+    <div class="zoom-ctl">
+      <button id="zIn"  title="Yakınlaştır">＋</button>
+      <button id="zOut" title="Uzaklaştır">−</button>
+      <button id="zFit" title="Sığdır" style="font-size:14px">⛶</button>
+      <div class="zoom-pct" id="zPct">100%</div>
+    </div>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+
+  <div class="sheet" id="sheet">
+    <div class="grab"></div>
+    <div class="close" id="close">✕</div>
+    <h3 id="sName">—</h3>
+    <div class="sub" id="sSub">—</div>
+    <div class="lineage" id="sLineage"></div>
+    <div class="specs" id="sSpecs"></div>
+    <div class="desc" id="sDesc"></div>
+    <div style="font-size:11px;color:var(--muted);margin-top:14px">Kullanan ülkeler</div>
+    <div class="users" id="sUsers"></div>
+    <div class="actions">
+      <div class="btn primary" id="addBtn">Envantere Ekle (+50 XP)</div>
+      <div class="btn ghost" id="quizBtn">Quiz</div>
+    </div>
+  </div>
+
+  <!-- ===== Quiz ekranı ===== -->
+  <div class="screen" id="screenQuiz" hidden>
+    <div class="screen-head">
+      <div class="screen-title" id="qTitle"><span class="ico">🎯</span> Bilgi Yolu</div>
+      <div class="qprogress"><i id="qBar"></i></div>
+      <div class="qmeta"><span id="qNum">1 / 10</span><span id="qScore">0 puan</span></div>
+    </div>
+    <div class="qbody" id="qBody"></div>
+  </div>
+
+  <!-- ===== Spec Dövüşü ekranı ===== -->
+  <div class="screen" id="screenCompare" hidden>
+    <div class="screen-head">
+      <div class="screen-title"><span class="ico">⚖️</span> Spec Dövüşü</div>
+      <div class="cmeta"><span id="cScore">Sen 0 — 0 Rakip</span><span id="cRound">El 1 / 5</span></div>
+    </div>
+    <div class="cbody" id="cBody"></div>
+  </div>
+
+  <!-- ===== Türkiye-özel sayfa ===== -->
+  <div class="screen" id="screenTurkey" hidden>
+    <div class="screen-head tr-head">
+      <div class="tr-flag">🇹🇷</div>
+      <div>
+        <div class="tr-title">Türkiye Savunma Ağacı</div>
+        <div class="tr-sub">Yerli tasarım & lisans üretiminden bugüne</div>
+      </div>
+    </div>
+    <div class="tr-body" id="trBody"></div>
+  </div>
+
+  <div class="toast" id="toast">Eklendi! +50 XP</div>
+
+  <div class="nav">
+    <div class="item active" data-screen="tree"><div class="ico">🌳</div>Ağaç</div>
+    <div class="item" data-screen="compare"><div class="ico">⚖️</div>Karşılaştır</div>
+    <div class="item" data-screen="quiz"><div class="ico">🎯</div>Quiz</div>
+    <div class="item" data-screen="turkey"><div class="ico">🇹🇷</div>Türkiye</div>
+    <div class="item" data-screen="lock"><div class="ico">👤</div>Profil</div>
+  </div>
+</div>
+
+<div class="caption">Demo · veriler kamuya açık silah tarihinden derlenmiştir</div>
+
+<script>
+/* ---------- Data: Ülke → Kategori → Düğümler ---------- */
+const DATA = {
+  RU: {
+    flag:"🇷🇺", name:"Rusya / SSCB",
+    cats:{
+      rifle:{
+        icon:"🔫", label:"Tüfek", family:"Kalaşnikof Ailesi",
+        nodes:[
+          { id:"stg44", year:1944, name:"StG 44", parent:null, cal:"7.92×33", icon:"🪖",
+            users:["Almanya (orijinal)"], featured:true,
+            desc:"İlk seri üretim 'sturmgewehr'. AK-47 dahil pek çok modern saldırı tüfeğine kavramsal ilham." },
+          { id:"ak47", year:1949, name:"AK-47", parent:"stg44", cal:"7.62×39", icon:"🔫",
+            users:["SSCB","Onlarca ülke"],
+            desc:"Mihail Kalaşnikof tarafından tasarlanan, basit ve dayanıklı yapısıyla tarihte en çok üretilen saldırı tüfeği." },
+          { id:"akm", year:1959, name:"AKM", parent:"ak47", cal:"7.62×39", icon:"🔫",
+            users:["SSCB","Doğu Bloku"],
+            desc:"AK-47'nin damgalı sac gövdeyle hafifletilmiş modernizasyonu. Üretim maliyeti ciddi şekilde düştü." },
+          { id:"ak74", year:1974, name:"AK-74", parent:"akm", cal:"5.45×39", icon:"🔫",
+            users:["SSCB","Rusya"], featured:true,
+            desc:"NATO'nun küçük kalibre eğilimine yanıt: 5.45×39 mm yüksek hızlı mermi, daha düşük geri tepme." },
+          { id:"aks74u", year:1979, name:"AKS-74U", parent:"ak74", cal:"5.45×39", icon:"🛡️",
+            users:["Sovyet özel birlikleri","Polis"],
+            desc:"Kompakt karabina varyantı; tank/helikopter mürettebatı ve özel kuvvetler için." },
+          { id:"ak74m", year:1991, name:"AK-74M", parent:"ak74", cal:"5.45×39", icon:"🔫",
+            users:["Rusya"],
+            desc:"Katlanır polimer dipçik, evrensel ray sistemi; Rus ordusunun standart tüfeği." },
+          { id:"ak101", year:1994, name:"AK-101", parent:"ak74m", cal:"5.56 NATO", icon:"🔫",
+            users:["İhracat"],
+            desc:"NATO mermisini kullanan ihracat odaklı varyant." },
+          { id:"ak103", year:1994, name:"AK-103", parent:"ak74m", cal:"7.62×39", icon:"🔫",
+            users:["Venezuela","Libya","Rusya"],
+            desc:"Klasik 7.62×39 fişeği seven kullanıcılar için modernize gövde." },
+          { id:"ak12", year:2018, name:"AK-12", parent:"ak74m", cal:"5.45×39", icon:"🚀",
+            users:["Rusya"],
+            desc:"Ratnik askeri modernizasyon programı kapsamında kabul edilen yeni nesil servis tüfeği." }
+        ]
+      },
+      tank:{
+        icon:"🛡️", label:"Tank", family:"Sovyet Tank Ailesi",
+        nodes:[
+          { id:"t34", year:1940, name:"T-34", parent:null, cal:"76 mm", icon:"🛡️",
+            users:["SSCB"], featured:true,
+            desc:"WW2'nin en etkili orta tankı; sloped armor konseptini popülerleştirdi." },
+          { id:"t54", year:1947, name:"T-54/55", parent:"t34", cal:"100 mm", icon:"🛡️",
+            users:["SSCB","Pakt ülkeleri"], featured:true,
+            desc:"Soğuk Savaş'ın en çok üretilen tankı (~100.000+ adet)." },
+          { id:"t62", year:1961, name:"T-62", parent:"t54", cal:"115 mm", icon:"🛡️",
+            users:["SSCB"],
+            desc:"İlk seri üretim düz namlu (smoothbore) topu kullanan tank." },
+          { id:"t64", year:1963, name:"T-64", parent:"t54", cal:"125 mm", icon:"🛡️",
+            users:["SSCB"],
+            desc:"Otomatik mermi yükleyici ve kompozit zırh ile dönemine göre devrim." },
+          { id:"t72", year:1969, name:"T-72", parent:"t64", cal:"125 mm", icon:"🛡️",
+            users:["SSCB","Onlarca ülke"], featured:true,
+            desc:"En yaygın Sovyet ana muharebe tankı; ihracat şampiyonu." },
+          { id:"t80", year:1976, name:"T-80", parent:"t64", cal:"125 mm", icon:"🛡️",
+            users:["SSCB","Rusya"],
+            desc:"Türbin motorlu hızlı varyant — jet uçağı motoru ailesi kullandı." },
+          { id:"t90", year:1992, name:"T-90", parent:"t72", cal:"125 mm", icon:"🛡️",
+            users:["Rusya","Hindistan"],
+            desc:"T-72'nin modernize devamı; Hindistan ordusunun da ana muharebe tankı." },
+          { id:"t14", year:2015, name:"T-14 Armata", parent:"t90", cal:"125 mm", icon:"🚀",
+            users:["Rusya"],
+            desc:"İnsansız taret, modüler platform; Rus tank doktrininde köklü değişim." }
+        ]
+      }
+    }
+  },
+
+  US: {
+    flag:"🇺🇸", name:"ABD",
+    cats:{
+      rifle:{
+        icon:"🔫", label:"Tüfek", family:"AR-15 / M16 Ailesi",
+        nodes:[
+          { id:"ar10", year:1956, name:"AR-10", parent:null, cal:"7.62 NATO", icon:"🪖",
+            users:["Portekiz","Sudan"], featured:true,
+            desc:"Eugene Stoner tasarımı; alüminyum gövde ve doğrudan gaz tertibatı ile döneminde radikaldi." },
+          { id:"ar15", year:1959, name:"AR-15", parent:"ar10", cal:"5.56×45", icon:"🔫",
+            users:["Sivil pazar"],
+            desc:"AR-10'un küçük kalibre versiyonu. Askeri M16'nın doğrudan atası." },
+          { id:"m16", year:1964, name:"M16", parent:"ar15", cal:"5.56 NATO", icon:"🔫",
+            users:["ABD Ordusu"],
+            desc:"AR-15'in askeri kabulü. Vietnam'da geniş çaplı dağıtıldı." },
+          { id:"m16a1", year:1967, name:"M16A1", parent:"m16", cal:"5.56 NATO", icon:"🔫",
+            users:["ABD"],
+            desc:"Krom kaplı namlu, ileri itme kolu; Vietnam tecrübesinden çıkarılan dersler." },
+          { id:"m16a2", year:1983, name:"M16A2", parent:"m16a1", cal:"5.56 NATO", icon:"🔫",
+            users:["ABD","NATO"],
+            desc:"Üç-atışlık seri, ağırlaştırılmış namlu; uzun menzil isabetinde gelişme." },
+          { id:"m4", year:1994, name:"M4", parent:"m16a2", cal:"5.56 NATO", icon:"🛡️",
+            users:["ABD"], featured:true,
+            desc:"14.5 inç namluya sahip kompakt karabina; M16A2'nin yerine birçok birimde standart." },
+          { id:"m4a1", year:1994, name:"M4A1", parent:"m4", cal:"5.56 NATO", icon:"🚀",
+            users:["ABD özel kuv."],
+            desc:"Tam otomatik atış modu, ağır namlu; özel operasyon kuvvetlerinin tercihi." },
+          { id:"m16a4", year:1998, name:"M16A4", parent:"m16a2", cal:"5.56 NATO", icon:"🔫",
+            users:["ABD Deniz Pi."],
+            desc:"M5 Picatinny rayı ve modüler aksesuar arayüzüyle modernizasyon." }
+        ]
+      },
+      tank:{
+        icon:"🛡️", label:"Tank", family:"Patton-Abrams Soyu",
+        nodes:[
+          { id:"m4sh", year:1942, name:"M4 Sherman", parent:null, cal:"75 mm", icon:"🛡️",
+            users:["ABD","Müttefikler"], featured:true,
+            desc:"WW2'nin sembolü; üretim mucizesi (~50.000 adet)." },
+          { id:"m26", year:1944, name:"M26 Pershing", parent:"m4sh", cal:"90 mm", icon:"🛡️",
+            users:["ABD"],
+            desc:"WW2 sonunda devreye giren ağır tank; M48'in atası." },
+          { id:"m48", year:1953, name:"M48 Patton", parent:"m26", cal:"90 mm", icon:"🛡️",
+            users:["ABD","NATO","Türkiye"],
+            desc:"Soğuk Savaş'ın orta tankı; Türkiye'de uzun süre standarttı." },
+          { id:"m60", year:1960, name:"M60", parent:"m48", cal:"105 mm", icon:"🛡️",
+            users:["ABD","Türkiye","NATO"], featured:true,
+            desc:"M48'in 105mm'lik halefi; Türkiye'de hâlâ envanterde modernize varyantları." },
+          { id:"m1", year:1980, name:"M1 Abrams", parent:"m60", cal:"105 mm", icon:"🛡️",
+            users:["ABD"],
+            desc:"Türbin motor + kompozit zırh ile yeni nesil ana muharebe tankı." },
+          { id:"m1a2", year:1992, name:"M1A2 Abrams", parent:"m1", cal:"120 mm", icon:"🛡️",
+            users:["ABD","Suudi Arabistan"], featured:true,
+            desc:"120 mm smoothbore + dijital sistem yükseltmesi." },
+          { id:"m1a2sep3", year:2017, name:"M1A2 SEPv3", parent:"m1a2", cal:"120 mm", icon:"🚀",
+            users:["ABD"],
+            desc:"En güncel SEP (System Enhancement Package) varyantı." }
+        ]
+      }
+    }
+  },
+
+  TR: {
+    flag:"🇹🇷", name:"Türkiye",
+    cats:{
+      rifle:{
+        icon:"🔫", label:"Tüfek", family:"MKE Tüfek Ailesi",
+        nodes:[
+          { id:"g3", year:1959, name:"H&K G3", parent:null, cal:"7.62 NATO", icon:"🪖",
+            users:["Almanya (orijinal)"],
+            desc:"Heckler &amp; Koch tasarımı; Türkiye 1970'lerden itibaren MKE tarafından G3A7 olarak lisans altında üretti." },
+          { id:"hk33", year:1968, name:"HK33", parent:"g3", cal:"5.56×45", icon:"🔫",
+            users:["Türkiye","Tayland"],
+            desc:"G3'ün küçük kalibre türevi; MKE tarafından lisanslı üretildi." },
+          { id:"mpt76", year:2014, name:"MPT-76", parent:"g3", cal:"7.62 NATO", icon:"🔫",
+            users:["TSK"], featured:true,
+            desc:"Milli Piyade Tüfeği. G3'ün operasyonel deneyimi üzerine yerli tasarım; teslimatlar 2017'de başladı." },
+          { id:"mpt55", year:2017, name:"MPT-55", parent:"mpt76", cal:"5.56 NATO", icon:"🔫",
+            users:["TSK","PÖH"],
+            desc:"MPT-76'nın 5.56 NATO varyantı; daha hafif, şehir içi operasyona uygun." },
+          { id:"knt76", year:2021, name:"KNT-76", parent:"mpt76", cal:"7.62 NATO", icon:"🎯",
+            users:["TSK"],
+            desc:"MPT-76 tabanlı yarı otomatik keskin nişancı varyantı." },
+          { id:"mpt76mh", year:2023, name:"MPT-76 MH", parent:"mpt76", cal:"7.62 NATO", icon:"🚀",
+            users:["TSK"],
+            desc:"Modernize ergonomi ve aksesuar arayüzü ile güncellenmiş MPT-76." }
+        ]
+      },
+      iha:{
+        icon:"🚁", label:"İHA", family:"Türk İHA Ailesi",
+        nodes:[
+          { id:"heron", year:2010, name:"Heron", parent:null, cal:"35 saat", icon:"🚁",
+            users:["TSK (kiralık)"],
+            desc:"İsrail IAI tasarımı; Türkiye 2010'larda kiraladı, eğitim platformu işlevi gördü." },
+          { id:"anka", year:2010, name:"Anka", parent:"heron", cal:"24 saat", icon:"🚁",
+            users:["TSK","MİT"], featured:true,
+            desc:"TUSAŞ tarafından geliştirilen ilk yerli MALE (orta irtifa, uzun havada kalış) İHA." },
+          { id:"tb2", year:2014, name:"Bayraktar TB2", parent:"anka", cal:"27 saat", icon:"🚁",
+            users:["TSK","30+ ülke"], featured:true,
+            desc:"BAYKAR tasarımı; Suriye, Libya, Karabağ, Ukrayna'da etkili kullanım. Türk savunma ihracatının sembolü." },
+          { id:"akinci", year:2021, name:"Bayraktar Akıncı", parent:"tb2", cal:"24 saat", icon:"🚁",
+            users:["TSK"],
+            desc:"Daha büyük, ağır taşıyabilen turboprop İHA; SOM-A gibi havadan-yere mühimmat taşıyabilir." },
+          { id:"tb3", year:2023, name:"Bayraktar TB3", parent:"tb2", cal:"24 saat", icon:"🚁",
+            users:["TSK"],
+            desc:"TB2'nin katlanır kanatlı, gemi güvertesinden uçabilen versiyonu; TCG Anadolu için." },
+          { id:"kizilelma", year:2022, name:"Bayraktar Kızılelma", parent:"akinci", cal:"5 saat", icon:"🚀",
+            users:["TSK (test)"], featured:true,
+            desc:"Jet motorlu insansız savaş uçağı (UCAV); TCG Anadolu güvertesinden kalkış için tasarlandı." },
+          { id:"anka3", year:2023, name:"Anka-3", parent:"anka", cal:"10 saat", icon:"🚀",
+            users:["TSK (test)"],
+            desc:"TUSAŞ'ın stealth özellikli flying-wing UCAV'ı." }
+        ]
+      },
+      hava:{
+        icon:"🎯", label:"Hava Savunma", family:"Türk Hava Savunma",
+        nodes:[
+          { id:"hawk", year:1965, name:"MIM-23 Hawk", parent:null, cal:"40 km", icon:"🎯",
+            users:["TSK (orijinal: ABD)"],
+            desc:"ABD yapımı orta menzilli SAM; Türkiye'de uzun süre standarttı." },
+          { id:"korkut", year:2018, name:"Korkut", parent:"hawk", cal:"4 km", icon:"🎯",
+            users:["TSK"],
+            desc:"35mm radar güdümlü çift namlulu uçaksavar topu; alçak irtifa savunması." },
+          { id:"hisar_a", year:2017, name:"Hisar-A+", parent:"hawk", cal:"15 km", icon:"🎯",
+            users:["TSK"], featured:true,
+            desc:"Aselsan-Roketsan ortak yapımı kısa menzilli yerli SAM." },
+          { id:"hisar_o", year:2018, name:"Hisar-O+", parent:"hisar_a", cal:"25 km", icon:"🎯",
+            users:["TSK"],
+            desc:"Hisar ailesinin orta menzilli varyantı." },
+          { id:"hisar_u", year:2024, name:"Hisar-U", parent:"hisar_o", cal:"100+ km", icon:"🎯",
+            users:["TSK (test)"],
+            desc:"Hisar ailesinin uzun menzilli geliştirme varyantı." },
+          { id:"siper", year:2024, name:"Siper", parent:"hisar_o", cal:"150+ km", icon:"🚀",
+            users:["TSK"], featured:true,
+            desc:"Aselsan-Roketsan-TÜBİTAK SAGE ortak ürünü; Türkiye'nin yerli uzun menzilli SAM'i." }
+        ]
+      }
+    }
+  },
+
+  DE:{flag:"🇩🇪",name:"Almanya",locked:true,cats:{}},
+  IL:{flag:"🇮🇱",name:"İsrail",locked:true,cats:{}},
+  CN:{flag:"🇨🇳",name:"Çin",locked:true,cats:{}}
+};
+
+/* Erişilebilir kategori listesi (lock olmayanlar) */
+const CATS = ["rifle","tank","iha","hava"];
+const CAT_META = {
+  rifle:{icon:"🔫", label:"Tüfek"},
+  tank: {icon:"🛡️", label:"Tank"},
+  iha:  {icon:"🚁", label:"İHA"},
+  hava: {icon:"🎯", label:"Hava Sav."}
+};
+
+/* ---------- Real-weapon images (Wikimedia Commons thumbnails) ---------- */
+const IMAGES = {
+  stg44:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Sturmgewehr44_noBG.jpg/330px-Sturmgewehr44_noBG.jpg",
+  ak47: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/AK-47_type_II_noBG.png/330px-AK-47_type_II_noBG.png",
+  akm:  "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b8/AKM_automatkarbin_Ryssland_-_7%2C62x39mm_-_Arm%C3%A9museum_bothsides_noBG.png/330px-AKM_automatkarbin_Ryssland_-_7%2C62x39mm_-_Arm%C3%A9museum_bothsides_noBG.png",
+  ak74: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Ak74l.png/330px-Ak74l.png",
+  aks74u:"https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/AKS74U_%28noBG%29.jpg/330px-AKS74U_%28noBG%29.jpg",
+  ak74m:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Ak74l.png/330px-Ak74l.png",
+  ak101:"https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/%D0%90%D0%9A-101.jpg/330px-%D0%90%D0%9A-101.jpg",
+  ak103:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Ak74l.png/330px-Ak74l.png",
+  ak12: "https://upload.wikimedia.org/wikipedia/commons/thumb/2/20/Ak74l.png/330px-Ak74l.png",
+
+  ar10: "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9f/AR10_Armalite_vue_d%27ensemble_noBG.png/330px-AR10_Armalite_vue_d%27ensemble_noBG.png",
+  ar15: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/ArmaLite_AR-15_SPAR_3240_DEC._17._2004.png/330px-ArmaLite_AR-15_SPAR_3240_DEC._17._2004.png",
+  m16:  "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/M16A2_noBG.jpg/330px-M16A2_noBG.jpg",
+  m16a1:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/M16A2_noBG.jpg/330px-M16A2_noBG.jpg",
+  m16a2:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/M16A2_noBG.jpg/330px-M16A2_noBG.jpg",
+  m4:   "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/PEO_M4_Carbine_RAS_M68_CCO.png/330px-PEO_M4_Carbine_RAS_M68_CCO.png",
+  m4a1: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/68/PEO_M4_Carbine_RAS_M68_CCO.png/330px-PEO_M4_Carbine_RAS_M68_CCO.png",
+  m16a4:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/M16A2_noBG.jpg/330px-M16A2_noBG.jpg",
+
+  g3:   "https://upload.wikimedia.org/wikipedia/commons/thumb/9/92/Heckler_%26_Koch_G3_Kunststoffschaft_Display_noBG.png/330px-Heckler_%26_Koch_G3_Kunststoffschaft_Display_noBG.png",
+  hk33: "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/HK33A2_Flickr_%28yet_another_finn%29.jpg/330px-HK33A2_Flickr_%28yet_another_finn%29.jpg",
+  mpt76:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/MPT-76_Assault_Rifle.jpg/330px-MPT-76_Assault_Rifle.jpg",
+  mpt55:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/MPT-76_Assault_Rifle.jpg/330px-MPT-76_Assault_Rifle.jpg",
+  knt76:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/MPT-76_Assault_Rifle.jpg/330px-MPT-76_Assault_Rifle.jpg",
+  mpt76mh:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/30/MPT-76_Assault_Rifle.jpg/330px-MPT-76_Assault_Rifle.jpg"
+};
+
+/* ---------- Specs (yaklaşık değerler — Wikipedia'dan derlenmiştir) ---------- */
+/* Her kategorinin kendi stat seti var — spec dövüşü aynı kategori içinde yapılır */
+const STAT_DEFS = {
+  rifle:{
+    weight:{label:"Ağırlık", unit:"kg", higher:false},
+    range: {label:"Menzil",  unit:"m",  higher:true},
+    rpm:   {label:"Atış Hızı",unit:"rpm",higher:true},
+    vel:   {label:"Mermi Hızı",unit:"m/s",higher:true}
+  },
+  tank:{
+    weight:{label:"Ağırlık", unit:"t",  higher:false},
+    gun:   {label:"Top Çapı",unit:"mm", higher:true},
+    range: {label:"Menzil",  unit:"km", higher:true},
+    armor: {label:"Zırh",    unit:"mm RHA", higher:true}
+  },
+  iha:{
+    range:    {label:"Menzil",     unit:"km",   higher:true},
+    endurance:{label:"Havada Kalış",unit:"saat",higher:true},
+    payload:  {label:"Faydalı Yük",unit:"kg",   higher:true},
+    ceiling:  {label:"Tavan",      unit:"m",    higher:true}
+  },
+  hava:{
+    range:    {label:"Menzil",   unit:"km", higher:true},
+    ceiling:  {label:"İrtifa",   unit:"km", higher:true},
+    targets:  {label:"Eşz. Hedef",unit:"",  higher:true},
+    reaction: {label:"Tepki",    unit:"sn", higher:false}
+  }
+};
+
+const STATS = {
+  // RU + US + TR rifle
+  stg44: {weight:4.6, range:300, rpm:550, vel:685},
+  ak47:  {weight:4.3, range:350, rpm:600, vel:715},
+  akm:   {weight:3.1, range:350, rpm:600, vel:715},
+  ak74:  {weight:3.3, range:500, rpm:650, vel:900},
+  aks74u:{weight:2.7, range:350, rpm:700, vel:735},
+  ak74m: {weight:3.4, range:500, rpm:650, vel:900},
+  ak101: {weight:3.6, range:500, rpm:600, vel:910},
+  ak103: {weight:3.6, range:350, rpm:600, vel:715},
+  ak12:  {weight:3.5, range:600, rpm:700, vel:900},
+  ar10:  {weight:3.3, range:700, rpm:700, vel:820},
+  ar15:  {weight:2.9, range:460, rpm:800, vel:975},
+  m16:   {weight:3.4, range:550, rpm:750, vel:945},
+  m16a1: {weight:3.4, range:460, rpm:700, vel:945},
+  m16a2: {weight:3.9, range:550, rpm:800, vel:948},
+  m4:    {weight:2.9, range:500, rpm:700, vel:880},
+  m4a1:  {weight:2.9, range:500, rpm:700, vel:880},
+  m16a4: {weight:3.9, range:550, rpm:800, vel:948},
+  g3:    {weight:4.5, range:500, rpm:600, vel:800},
+  hk33:  {weight:3.7, range:400, rpm:750, vel:920},
+  mpt76: {weight:4.1, range:600, rpm:700, vel:830},
+  mpt55: {weight:3.6, range:500, rpm:750, vel:920},
+  knt76: {weight:4.5, range:800, rpm:0,   vel:830},
+  mpt76mh:{weight:4.0,range:600, rpm:700, vel:830},
+
+  // RU + US tank (yaklaşık değerler)
+  t34:   {weight:26, gun:76,  range:400, armor:60},
+  t54:   {weight:36, gun:100, range:500, armor:200},
+  t62:   {weight:40, gun:115, range:450, armor:230},
+  t64:   {weight:38, gun:125, range:500, armor:450},
+  t72:   {weight:41, gun:125, range:500, armor:520},
+  t80:   {weight:42, gun:125, range:500, armor:550},
+  t90:   {weight:46, gun:125, range:550, armor:830},
+  t14:   {weight:55, gun:125, range:600, armor:900},
+  m4sh:  {weight:30, gun:75,  range:400, armor:75},
+  m26:   {weight:42, gun:90,  range:450, armor:100},
+  m48:   {weight:45, gun:90,  range:500, armor:178},
+  m60:   {weight:47, gun:105, range:550, armor:254},
+  m1:    {weight:55, gun:105, range:550, armor:600},
+  m1a2:  {weight:62, gun:120, range:600, armor:900},
+  m1a2sep3:{weight:66,gun:120, range:600, armor:1000},
+
+  // TR İHA (yaklaşık)
+  heron:    {range:350,  endurance:35, payload:250,  ceiling:9000},
+  anka:     {range:250,  endurance:24, payload:200,  ceiling:9000},
+  tb2:      {range:300,  endurance:27, payload:150,  ceiling:8200},
+  akinci:   {range:1500, endurance:24, payload:1500, ceiling:12200},
+  tb3:      {range:300,  endurance:24, payload:280,  ceiling:9000},
+  kizilelma:{range:925,  endurance:5,  payload:1500, ceiling:12000},
+  anka3:    {range:1000, endurance:10, payload:1200, ceiling:12000},
+
+  // TR Hava savunma (yaklaşık)
+  hawk:    {range:40,  ceiling:14, targets:1, reaction:6},
+  korkut:  {range:4,   ceiling:4,  targets:2, reaction:3},
+  hisar_a: {range:15,  ceiling:5,  targets:4, reaction:5},
+  hisar_o: {range:25,  ceiling:10, targets:4, reaction:5},
+  hisar_u: {range:120, ceiling:20, targets:6, reaction:6},
+  siper:   {range:150, ceiling:25, targets:8, reaction:6}
+};
+
+/* ---------- Mastery (Model C: ustalık çubuğu) ---------- */
+/* Demo başlangıç durumu: atalarda usta, halefler kısmen veya kilitli. */
+const MASTERY = {
+  // RU rifle
+  stg44:100, ak47:100, akm:70,  ak74:0,
+  aks74u:0, ak74m:0, ak101:0, ak103:0, ak12:0,
+  // US rifle
+  ar10:100, ar15:100, m16:80,
+  m16a1:0, m16a2:0, m4:0, m4a1:0, m16a4:0,
+  // TR rifle
+  g3:100, hk33:0, mpt76:40, mpt55:0, knt76:0, mpt76mh:0,
+  // RU tank
+  t34:100, t54:100, t62:60, t64:0, t72:0, t80:0, t90:0, t14:0,
+  // US tank
+  m4sh:100, m26:100, m48:60, m60:0, m1:0, m1a2:0, m1a2sep3:0,
+  // TR İHA
+  heron:100, anka:100, tb2:60, akinci:0, tb3:0, kizilelma:0, anka3:0,
+  // TR Hava savunma
+  hawk:100, korkut:0, hisar_a:50, hisar_o:0, hisar_u:0, siper:0
+};
+/* Tıklayarak "tanıştığın" silahlar — quiz havuzu için */
+const DISCOVERED = new Set(Object.keys(MASTERY).filter(id => MASTERY[id] > 0));
+function mastery(id){ return MASTERY[id] || 0; }
+function discovered(id){ return DISCOVERED.has(id); }
+function bumpMastery(id, delta){
+  const before = mastery(id);
+  MASTERY[id] = Math.min(100, Math.max(0, before + delta));
+  return { before, after: MASTERY[id], crossed100: before<100 && MASTERY[id]>=100 };
+}
+/* Bir ülkenin belirli bir kategorisindeki node listesini döndürür */
+function catNodes(countryKey, catKey){
+  const c = DATA[countryKey]; if(!c || !c.cats) return [];
+  const cat = c.cats[catKey]; return cat ? cat.nodes : [];
+}
+function isAccessible(node, nodes){
+  if(!node.parent) return true;
+  const p = nodes.find(x=>x.id===node.parent);
+  return !!p && mastery(p.id) >= 100;
+}
+function nodeStatus(node, nodes){
+  if(!isAccessible(node, nodes)) return "locked";
+  const m = mastery(node.id);
+  if(m >= 100) return "master";
+  if(m >= 50)  return "field";
+  return "open";
+}
+
+/* ---------- Layout (subtree-width tree layout) ---------- */
+const NODE_W = 124, NODE_H = 122, COL_GAP = 12, ROW_GAP = 60;
+
+function layout(nodes){
+  const map = {};
+  nodes.forEach(n => map[n.id] = Object.assign({children:[]}, n));
+  const roots = [];
+  Object.values(map).forEach(n=>{
+    if(n.parent && map[n.parent]) map[n.parent].children.push(n);
+    else roots.push(n);
+  });
+
+  // sort children: more-children first goes right (looks balanced)
+  Object.values(map).forEach(n=>{
+    n.children.sort((a,b)=>(a.children?.length||0)-(b.children?.length||0));
+  });
+
+  // years -> y index
+  const years = [...new Set(nodes.map(n=>n.year))].sort((a,b)=>a-b);
+  const yIdx  = Object.fromEntries(years.map((y,i)=>[y,i]));
+
+  // recursive subtree width (in columns)
+  function w(n){
+    if(!n.children.length){ n._w = 1; return 1; }
+    n._w = n.children.reduce((s,c)=>s+w(c),0);
+    return n._w;
+  }
+  let totalCols = 0;
+  roots.forEach(r=>{ w(r); totalCols += r._w; });
+
+  // assign column index (float). leaves get integer cols, parents get child-mean.
+  function place(n, start){
+    if(!n.children.length){ n.col = start + 0.5; return; }
+    let cur = start;
+    n.children.forEach(c=>{ place(c, cur); cur += c._w; });
+    n.col = (n.children[0].col + n.children[n.children.length-1].col)/2;
+  }
+  let cur = 0;
+  roots.forEach(r=>{ place(r, cur); cur += r._w; });
+
+  // assign x,y in pixels
+  Object.values(map).forEach(n=>{
+    n.x = Math.round(n.col*(NODE_W+COL_GAP) - NODE_W/2);
+    n.y = yIdx[n.year]*(NODE_H+ROW_GAP);
+  });
+
+  return { map, years, yIdx, totalCols };
+}
+
+/* ---------- Render ---------- */
+const tabsEl   = document.getElementById("tabs");
+const canvas   = document.getElementById("canvas");
+const zoomer   = document.getElementById("zoomer");
+const yaxis    = document.getElementById("yaxis");
+const linksEl  = document.getElementById("links");
+const nodesEl  = document.getElementById("nodes");
+const treeWrap = document.getElementById("treeWrap");
+const treeTitle= document.getElementById("treeTitle");
+const sheet    = document.getElementById("sheet");
+const backdrop = document.getElementById("backdrop");
+const closeBtn = document.getElementById("close");
+const toast    = document.getElementById("toast");
+const zPct     = document.getElementById("zPct");
+
+let active = "RU";
+let activeCat = "rifle"; // ülke değişince geçerli ilk kategoriye atlar
+const catChipsEl = document.getElementById("catChips");
+
+function firstCatOf(countryKey){
+  const c = DATA[countryKey];
+  if(!c || !c.cats) return null;
+  return Object.keys(c.cats)[0] || null;
+}
+
+/* ---------- Zoom ---------- */
+const ZOOM_MIN = 0.35, ZOOM_MAX = 1.8;
+let zoom = 1;
+let baseW = 0, baseH = 0;  // canvas natural size at zoom=1
+
+function applyZoom(){
+  zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
+  canvas.style.transform = `scale(${zoom})`;
+  zoomer.style.width  = (baseW * zoom) + "px";
+  zoomer.style.height = (baseH * zoom) + "px";
+  zPct.textContent = Math.round(zoom*100) + "%";
+}
+
+/* zoom toward a focal point (px relative to treeWrap viewport) */
+function zoomAt(newZoom, fx, fy){
+  newZoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, newZoom));
+  // point in canvas-space before zoom
+  const cx = (treeWrap.scrollLeft + fx) / zoom;
+  const cy = (treeWrap.scrollTop  + fy) / zoom;
+  zoom = newZoom;
+  applyZoom();
+  // restore focal point
+  treeWrap.scrollLeft = cx * zoom - fx;
+  treeWrap.scrollTop  = cy * zoom - fy;
+}
+
+function fitToScreen(){
+  const padX = 28, padY = 28;
+  const fx = (treeWrap.clientWidth  - padX) / baseW;
+  const fy = (treeWrap.clientHeight - padY) / baseH;
+  zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.min(fx, fy)));
+  applyZoom();
+  // center
+  treeWrap.scrollLeft = Math.max(0, (baseW*zoom - treeWrap.clientWidth)/2);
+  treeWrap.scrollTop  = 0;
+}
+
+document.getElementById("zIn").onclick  = ()=> zoomAt(zoom*1.2, treeWrap.clientWidth/2, treeWrap.clientHeight/2);
+document.getElementById("zOut").onclick = ()=> zoomAt(zoom/1.2, treeWrap.clientWidth/2, treeWrap.clientHeight/2);
+document.getElementById("zFit").onclick = fitToScreen;
+
+/* wheel zoom (also pinch on trackpads sends ctrl+wheel) */
+treeWrap.addEventListener("wheel", e=>{
+  if(!e.ctrlKey && !e.metaKey && Math.abs(e.deltaY) < 30) return; // let normal scroll
+  e.preventDefault();
+  const r = treeWrap.getBoundingClientRect();
+  const factor = e.deltaY > 0 ? 0.9 : 1.1;
+  zoomAt(zoom*factor, e.clientX - r.left, e.clientY - r.top);
+}, {passive:false});
+
+/* pinch zoom (touch) */
+let pinch = null;
+treeWrap.addEventListener("touchstart", e=>{
+  if(e.touches.length === 2){
+    const [a,b] = e.touches;
+    const r = treeWrap.getBoundingClientRect();
+    pinch = {
+      d0: Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY),
+      z0: zoom,
+      cx: (a.clientX+b.clientX)/2 - r.left,
+      cy: (a.clientY+b.clientY)/2 - r.top,
+    };
+  }
+}, {passive:true});
+treeWrap.addEventListener("touchmove", e=>{
+  if(pinch && e.touches.length === 2){
+    e.preventDefault();
+    const [a,b] = e.touches;
+    const d = Math.hypot(a.clientX-b.clientX, a.clientY-b.clientY);
+    zoomAt(pinch.z0 * (d/pinch.d0), pinch.cx, pinch.cy);
+  }
+}, {passive:false});
+treeWrap.addEventListener("touchend", ()=>{ if(pinch && (!event.touches || event.touches.length<2)) pinch = null; });
+
+function renderTabs(){
+  tabsEl.innerHTML = "";
+  Object.entries(DATA).forEach(([key,c])=>{
+    const t = document.createElement("div");
+    t.className = "tab"+(key===active?" active":"");
+    t.innerHTML = `<span class="flag">${c.flag}</span><span>${c.name}</span>`+(c.locked?'<span class="lock">🔒</span>':'');
+    t.onclick = ()=>{
+      if(c.locked){ flash(`${c.name} yakında açılacak`); return; }
+      active = key;
+      // ülke değişince mevcut kategori bu ülkede yoksa ilkine geç
+      if(!DATA[key].cats || !DATA[key].cats[activeCat]){
+        activeCat = firstCatOf(key);
+      }
+      renderTabs(); renderCats(); renderTree();
+    };
+    tabsEl.appendChild(t);
+  });
+}
+
+function renderCats(){
+  catChipsEl.innerHTML = "";
+  const c = DATA[active];
+  if(!c || !c.cats || Object.keys(c.cats).length === 0) return;
+  Object.entries(c.cats).forEach(([catKey, cat])=>{
+    const count = cat.nodes.length;
+    const chip = document.createElement("div");
+    chip.className = "chip" + (catKey === activeCat ? " active" : "");
+    chip.innerHTML = `<span class="ico">${cat.icon}</span><span>${cat.label}</span><span class="ct">${count}</span>`;
+    chip.onclick = ()=>{
+      activeCat = catKey;
+      renderCats();
+      renderTree();
+    };
+    catChipsEl.appendChild(chip);
+  });
+}
+
+function renderTree(){
+  const c = DATA[active];
+  const cat = (c && c.cats) ? c.cats[activeCat] : null;
+  const nodes = cat ? cat.nodes : [];
+  treeTitle.textContent = cat ? cat.family : (c ? c.name : "");
+
+  if(!nodes.length){
+    yaxis.innerHTML = '<div class="yline"></div>';
+    linksEl.innerHTML = "";
+    nodesEl.innerHTML = `<div style="text-align:center;color:var(--muted);padding:40px 20px;font-size:13px">
+      <div style="font-size:36px">🔒</div>
+      <div style="margin-top:8px">Bu ülkenin ağacı henüz kilitli</div>
+      <div style="font-size:11px;margin-top:4px">Seviye 10'da açılır</div>
+    </div>`;
+    canvas.style.height = "300px";
+    return;
+  }
+
+  const L = layout(nodes);
+
+  // canvas size
+  const widthPx  = L.totalCols * (NODE_W+COL_GAP);
+  const heightPx = L.years.length * (NODE_H+ROW_GAP) - ROW_GAP + NODE_H + 28;
+  baseW = widthPx + 56 + 18;
+  baseH = heightPx + 14 + 30;
+  canvas.style.width  = baseW + "px";
+  canvas.style.height = baseH + "px";
+
+  // year axis
+  yaxis.innerHTML = '<div class="yline"></div>';
+  yaxis.style.height = heightPx + "px";
+  L.years.forEach((y,i)=>{
+    const t = document.createElement("div");
+    t.className = "ytick";
+    t.textContent = y;
+    t.style.top = (i*(NODE_H+ROW_GAP) + NODE_H/2) + "px";
+    yaxis.appendChild(t);
+  });
+
+  // svg sizing — keep defs
+  linksEl.setAttribute("width", widthPx);
+  linksEl.setAttribute("height", heightPx);
+  // wipe previous paths but keep <defs>
+  [...linksEl.querySelectorAll("path")].forEach(p=>p.remove());
+
+  // nodes
+  nodesEl.innerHTML = "";
+  Object.values(L.map).forEach(n=>{
+    const status = nodeStatus(n, nodes);
+    const locked = (status === "locked");
+    const m = mastery(n.id);
+    const el = document.createElement("div");
+    el.className = "nbox " + status + (n.featured?" featured":"");
+    el.style.left = (56 + n.x) + "px";
+    el.style.top  = (14 + n.y) + "px";
+    const imgUrl = IMAGES[n.id];
+
+    if(locked){
+      el.innerHTML = `
+        <div class="img-wrap"><span class="emoji">🔒</span></div>
+        <div class="nm" style="color:#5a6779">Kilitli</div>
+        <div class="yr">${n.year}</div>
+        <div class="cal" style="visibility:hidden">·</div>
+      `;
+    } else {
+      el.innerHTML = `
+        <div class="img-wrap">${imgUrl
+          ? `<img src="${imgUrl}" loading="lazy" alt="${n.name}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'emoji',textContent:'${n.icon}'}))"/>`
+          : `<span class="emoji">${n.icon}</span>`}</div>
+        <div class="nm">${n.name}</div>
+        <div class="yr">${n.year}</div>
+        <div class="cal">${n.cal}</div>
+        <div class="mbar"><i style="width:${m}%"></i></div>
+      `;
+    }
+
+    el.onclick = ()=>{
+      if(locked){
+        const p = L.map[n.parent];
+        flash(p ? `Önce ${p.name} silahında ustalaş (★)` : "Henüz erişilemiyor");
+        return;
+      }
+      openSheet(c, n);
+      document.querySelectorAll(".nbox.active").forEach(x=>x.classList.remove("active"));
+      el.classList.add("active");
+    };
+    nodesEl.appendChild(el);
+  });
+
+  // links (parent -> child) as bezier curves
+  Object.values(L.map).forEach(n=>{
+    if(!n.parent) return;
+    const p = L.map[n.parent]; if(!p) return;
+    const x1 = p.x + NODE_W/2;
+    const y1 = p.y + NODE_H;
+    const x2 = n.x + NODE_W/2;
+    const y2 = n.y;
+    const my = (y1+y2)/2;
+    const d  = `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`;
+    const path = document.createElementNS("http://www.w3.org/2000/svg","path");
+    const masterLink = mastery(p.id) >= 100 && mastery(n.id) >= 100;
+    const lockedLink = mastery(p.id) < 100;
+    path.setAttribute("d", d);
+    path.setAttribute("class", "link"+(masterLink?" owned":(lockedLink?" locked":"")));
+    linksEl.appendChild(path);
+  });
+
+  // initial: fit whole tree on screen, then user can zoom in
+  requestAnimationFrame(()=>{
+    fitToScreen();
+  });
+}
+
+/* ---------- Sheet ---------- */
+function openSheet(c, n){
+  // ilk tıklamada "tanış" — quiz havuzuna katılır
+  if(!discovered(n.id)){
+    DISCOVERED.add(n.id);
+    setTimeout(()=>flash(`${n.name} ile tanıştın · quiz havuzuna eklendi`), 250);
+  }
+  document.getElementById("sName").textContent = n.name;
+  document.getElementById("sSub").textContent  = `${c.name} · ${n.year} · ${n.cal}`;
+
+  // bu node'un kategorisini bul (mevcut state veya verilen c'den)
+  const catKey = activeCat;
+  const cat = (c && c.cats) ? c.cats[catKey] : null;
+  const nodes = cat ? cat.nodes : [];
+  const family = cat ? cat.family : (c ? c.name : "");
+
+  // lineage path
+  const path = []; let cur = n;
+  while(cur){ path.unshift(cur); cur = cur.parent ? nodes.find(x=>x.id===cur.parent) : null; }
+  document.getElementById("sLineage").innerHTML = path.map((p,i)=>{
+    const cls = (p.id===n.id)?"me":"";
+    return `<span class="${cls}">${p.name}</span>`+(i<path.length-1?'<span class="arrow">→</span>':'');
+  }).join("");
+
+  const m = mastery(n.id);
+  const status = m>=100 ? "★ Usta" : m>=50 ? "⚡ Saha Testi" : "Açıldı";
+  const statusColor = m>=100 ? "var(--accent)" : m>=50 ? "var(--accent-2)" : "var(--text)";
+
+  // kategoriye göre 2. spec etiketi (tüfek=Kalibre, tank=Top, iha=Hava süresi, hava=Menzil)
+  const primaryLabel = catKey==="rifle" ? "Kalibre"
+                    : catKey==="tank"  ? "Top Çapı"
+                    : catKey==="iha"   ? "Havada Kalış"
+                    : "Menzil";
+
+  document.getElementById("sSpecs").innerHTML = `
+    <div class="spec"><div class="k">Yıl</div><div class="v">${n.year}</div></div>
+    <div class="spec"><div class="k">${primaryLabel}</div><div class="v">${n.cal}</div></div>
+    <div class="spec"><div class="k">Aile</div><div class="v">${family}</div></div>
+    <div class="spec"><div class="k">Ustalık</div><div class="v" style="color:${statusColor}">${m}% · ${status}</div></div>
+  `;
+
+  // ustalık çubuğu + ipucu
+  const hint = m>=100
+    ? `🏆 <strong>Usta!</strong> Halefler kilitsiz. Ata-halef zincirini tamamladın.`
+    : m>=50
+      ? `⚡ Saha testindesin. <strong>Quiz +10%</strong> · <strong>Spec galibiyeti +20%</strong> · ${100-m}% kaldı`
+      : `🔓 Açıldı. <strong>Quiz +10%</strong> · <strong>Spec galibiyeti +20%</strong> · 50%'de saha testi başlar`;
+
+  document.getElementById("sDesc").innerHTML = `
+    <div class="mbar big"><i style="width:${m}%"></i></div>
+    <div class="mhint">${hint}</div>
+    <div style="margin-top:12px">${n.desc || ""}</div>
+  `;
+  document.getElementById("sUsers").innerHTML = (n.users||[]).map(u=>`<span>${u}</span>`).join("");
+
+  const addBtn = document.getElementById("addBtn");
+  const quizBtn = document.getElementById("quizBtn");
+  addBtn.textContent = "🎯 Quiz ile Çalış";
+  addBtn.style.opacity = 1;
+  addBtn.onclick = ()=>{
+    closeSheet();
+    screenQuiz.hidden = false;
+    screenCompare.hidden = true;
+    document.querySelectorAll(".nav .item").forEach(el=>{
+      el.classList.toggle("active", el.dataset.screen === "quiz");
+    });
+    startQuiz(n.id);
+  };
+  quizBtn.textContent = "⚖️ Dövüş";
+  quizBtn.onclick = ()=>{ closeSheet(); showScreen("compare"); };
+
+  sheet.classList.add("open"); backdrop.classList.add("show");
+}
+function closeSheet(){ sheet.classList.remove("open"); backdrop.classList.remove("show"); }
+closeBtn.onclick = closeSheet;
+backdrop.onclick = closeSheet;
+
+function flash(msg){
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(flash._t);
+  flash._t = setTimeout(()=>toast.classList.remove("show"), 1700);
+}
+
+/* ---------- Bottom nav routing ---------- */
+const screenQuiz    = document.getElementById("screenQuiz");
+const screenCompare = document.getElementById("screenCompare");
+const screenTurkey  = document.getElementById("screenTurkey");
+
+function showScreen(name){
+  screenQuiz.hidden    = (name !== "quiz");
+  screenCompare.hidden = (name !== "compare");
+  screenTurkey.hidden  = (name !== "turkey");
+  document.querySelectorAll(".nav .item").forEach(el=>{
+    el.classList.toggle("active", el.dataset.screen === (name||"tree"));
+  });
+  if(name === "quiz") startQuiz();
+  if(name === "compare") startCompare();
+  if(name === "turkey") renderTurkey();
+  // ağaca dönerken/değişimden sonra refresh
+  if(name === null || !name) renderTree();
+}
+
+/* ---------- Türkiye-özel sayfa ---------- */
+function renderTurkey(){
+  const tr = DATA.TR;
+  const trBody = document.getElementById("trBody");
+
+  // toplam istatistik
+  let totalNodes = 0, mastered = 0, discoveredCt = 0;
+  Object.values(tr.cats).forEach(cat=>{
+    cat.nodes.forEach(n=>{
+      totalNodes++;
+      if(mastery(n.id) >= 100) mastered++;
+      if(discovered(n.id)) discoveredCt++;
+    });
+  });
+
+  // cross-category banner — G3 → MPT-76 + Heron → Anka → TB2 hikayesi
+  let html = `
+    <div class="tr-summary">
+      <div class="tr-stat"><div class="v">${totalNodes}</div><div class="k">Sistem</div></div>
+      <div class="tr-stat"><div class="v">${mastered}</div><div class="k">Usta</div></div>
+      <div class="tr-stat"><div class="v">${Object.keys(tr.cats).length}</div><div class="k">Kategori</div></div>
+    </div>
+
+    <div class="tr-banner">
+      <div class="t">⚙️ Lisans → Yerli</div>
+      <div class="b">Türkiye savunma sanayii G3 lisansından MPT-76'ya, Heron kiralamasından TB2'ye uzanan iki büyük "lisans → yerli tasarım" geçişiyle şekillendi.</div>
+    </div>
+  `;
+
+  // her kategori için kart
+  Object.entries(tr.cats).forEach(([catKey, cat])=>{
+    const total = cat.nodes.length;
+    const ms = cat.nodes.filter(n => mastery(n.id) >= 100).length;
+    const fl = cat.nodes.filter(n => mastery(n.id) >= 50 && mastery(n.id) < 100).length;
+    const pct = Math.round((cat.nodes.reduce((s,n)=>s + mastery(n.id), 0) / (total*100)) * 100);
+
+    const minis = cat.nodes.map(n=>{
+      const m = mastery(n.id);
+      const cls = m>=100 ? "master" : m>=50 ? "field" : (isAccessible(n, cat.nodes) ? "" : "locked");
+      const img = IMAGES[n.id];
+      return `<div class="tr-mini ${cls}" title="${n.name}">${
+        img ? `<img src="${img}" alt=""/>` : `<span>${n.icon}</span>`
+      }</div>`;
+    }).join("");
+
+    html += `
+      <div class="tr-cat" data-cat="${catKey}">
+        <div class="tr-cat-head">
+          <span class="ico">${cat.icon}</span>
+          <span class="lbl">${cat.label}</span>
+          <span class="arr">›</span>
+        </div>
+        <div class="tr-cat-fam">${cat.family}</div>
+        <div class="tr-cat-prog"><i style="width:${pct}%"></i></div>
+        <div class="tr-cat-meta">
+          <span><strong>${ms}</strong> usta · <strong>${fl}</strong> saha · <strong>${total}</strong> toplam</span>
+          <span>%${pct}</span>
+        </div>
+        <div class="tr-mini-row">${minis}</div>
+      </div>
+    `;
+  });
+
+  trBody.innerHTML = html;
+
+  // kart → ağaç + o kategori
+  document.querySelectorAll("#trBody .tr-cat").forEach(el=>{
+    el.onclick = ()=>{
+      active = "TR";
+      activeCat = el.dataset.cat;
+      renderTabs();
+      renderCats();
+      showScreen(null);
+    };
+  });
+}
+document.querySelectorAll(".nav .item").forEach(el=>{
+  el.onclick = ()=>{
+    const s = el.dataset.screen;
+    if(s === "lock"){ flash("Yakında"); return; }
+    showScreen(s === "tree" ? null : s);
+  };
+});
+
+/* ============================================================
+   QUIZ MODE — bilgi sorusu (3 tip rotasyon)
+   ============================================================ */
+const ALL_NODES = ["RU","US","TR"].flatMap(k =>
+  Object.entries(DATA[k].cats).flatMap(([catKey, cat]) =>
+    cat.nodes.map(n => ({
+      ...n, country:k, cat:catKey,
+      family:cat.family, flag:DATA[k].flag, nameOf:DATA[k].name
+    }))
+  )
+);
+const QSTYLES = ["which","parent"]; // soru tipleri ("year" askıda — çok zor, sonra düşüneceğiz)
+
+/* sadece "tanıştığın" silahları sor — yenileri spoil etme */
+function quizPool(){
+  const p = ALL_NODES.filter(n => discovered(n.id));
+  return p.length >= 4 ? p : ALL_NODES.filter(n => mastery(n.id) > 0 || discovered(n.id));
+}
+
+let qState = null;
+
+function startQuiz(focusId){
+  const focus = focusId ? ALL_NODES.find(n=>n.id===focusId) : null;
+  qState = {
+    idx:0,
+    total: focus ? 5 : 8,
+    score:0, current:null, answered:false,
+    focus: focus, lastStyle: null
+  };
+  renderQuiz();
+}
+
+function pickRandom(arr,n,exclude=[]){
+  const pool = arr.filter(x=>!exclude.includes(x));
+  const out = [];
+  while(out.length < n && pool.length){
+    out.push(pool.splice(Math.floor(Math.random()*pool.length),1)[0]);
+  }
+  return out;
+}
+function shuffle(a){return a.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(x=>x[1])}
+
+/* zincir: focus + sadece KEŞFEDİLMİŞ ataları */
+function ancestryChain(node){
+  const chain = [node];
+  let cur = node;
+  while(cur && cur.parent){
+    const p = ALL_NODES.find(x => x.id === cur.parent);
+    if(!p || !discovered(p.id)) break;
+    chain.push(p);
+    cur = p;
+  }
+  return chain;
+}
+
+function buildQ(me, style, allCalibers){
+  if(!discovered(me.id)) return null; // güvenlik: keşfedilmemiş subject sorulmaz
+  const sameCatNodes = catNodes(me.country, me.cat);
+  const parentNode = me.parent ? sameCatNodes.find(x=>x.id===me.parent) : null;
+  // sadece aynı kategorideki KEŞFEDİLMİŞ halefler
+  const childCandidates = sameCatNodes.filter(x => x.parent===me.id && discovered(x.id));
+  const childNode = childCandidates[Math.floor(Math.random()*childCandidates.length)];
+  // distraktörler aynı kategoriden çekilsin
+  const POOL = quizPool().filter(n => n.cat === me.cat);
+
+  if(style === "which"){
+    const distractors = pickRandom(POOL.filter(x=>x.id!==me.id), 3).map(x=>x.name);
+    return {
+      type:style, subject:me, photo:IMAGES[me.id],
+      prompt:"Bu silah hangisidir?",
+      hint:`${me.flag} ${me.nameOf}`,
+      options:shuffle([me.name,...distractors]),
+      correct:me.name,
+      explain:`${me.name}, ${me.year} yılında ${me.nameOf} envanterine girdi.`
+    };
+  }
+  if(style === "parent" && parentNode && discovered(parentNode.id)){
+    const distractors = pickRandom(POOL.filter(x=>x.id!==me.id && x.id!==parentNode.id), 3).map(x=>x.name);
+    return {
+      type:style, subject:me, photo:IMAGES[me.id],
+      prompt:`${me.name} silahının atası hangisidir?`,
+      hint:`${me.flag} ${me.year}`,
+      options:shuffle([parentNode.name,...distractors]),
+      correct:parentNode.name,
+      explain:`${me.name}, ${parentNode.name}'ten evrildi.`
+    };
+  }
+  if(style === "child" && childNode){
+    const distractors = pickRandom(POOL.filter(x=>x.id!==me.id && x.id!==childNode.id), 3).map(x=>x.name);
+    return {
+      type:style, subject:me, photo:IMAGES[me.id],
+      prompt:`${me.name}'in haleflerinden biri hangisidir?`,
+      hint:`${me.flag}`,
+      options:shuffle([childNode.name,...distractors]),
+      correct:childNode.name,
+      explain:`${childNode.name}, ${me.name}'in evrimi olarak ortaya çıktı.`
+    };
+  }
+  if(style === "caliber"){
+    // sadece aynı kategorideki "cal" değerleri arasından distraktör
+    const sameCatCals = [...new Set(sameCatNodes.map(x=>x.cal))];
+    const distractors = pickRandom(sameCatCals.filter(c=>c!==me.cal), 3);
+    const promptByCat = {
+      rifle:`${me.name} hangi mermiyi kullanır?`,
+      tank: `${me.name} hangi top çapına sahip?`,
+      iha:  `${me.name} havada ne kadar kalır?`,
+      hava: `${me.name} menzili nedir?`
+    };
+    const explainByCat = {
+      rifle:`${me.name}, ${me.cal} kalibresini kullanır.`,
+      tank: `${me.name}, ${me.cal} top kullanır.`,
+      iha:  `${me.name}, ${me.cal} havada kalabilir.`,
+      hava: `${me.name} menzili ${me.cal}.`
+    };
+    return {
+      type:style, subject:me, photo:IMAGES[me.id],
+      prompt: promptByCat[me.cat] || promptByCat.rifle,
+      hint:`${me.flag} ${me.year}`,
+      options:shuffle([me.cal,...distractors]),
+      correct:me.cal,
+      explain: explainByCat[me.cat] || explainByCat.rifle
+    };
+  }
+  return null; // bu tip uygun değil
+}
+
+function generateQ(){
+  const allCalibers = [...new Set(ALL_NODES.map(x=>x.cal))];
+  const focus = qState && qState.focus;
+
+  // FOCUS MODU: subject = focus + atalar zinciri (focus daha sık)
+  if(focus){
+    const chain = ancestryChain(focus);
+    // %65 focus, %35 ata
+    const me = (Math.random() < 0.65 || chain.length === 1)
+      ? focus
+      : chain[1 + Math.floor(Math.random()*(chain.length-1))];
+
+    const styles = ["which","parent","child","caliber"];
+    // ardı ardına aynı tip olmasın
+    let q = null, tries = 0;
+    while(!q && tries++ < 8){
+      let style;
+      do { style = styles[Math.floor(Math.random()*styles.length)]; }
+      while(style === qState.lastStyle && styles.length > 1);
+      q = buildQ(me, style, allCalibers);
+      if(q) qState.lastStyle = style;
+    }
+    if(q) return q;
+    // fallback
+    return buildQ(me, "which", allCalibers);
+  }
+
+  // SERBEST MOD: rastgele tanışık silah, rastgele tip
+  const style = QSTYLES[Math.floor(Math.random()*QSTYLES.length)];
+  const POOL = quizPool();
+  if(style === "which"){
+    // foto göster, ismini seç
+    const me = POOL[Math.floor(Math.random()*POOL.length)];
+    const distractors = pickRandom(POOL.filter(x=>x.id!==me.id), 3).map(x=>x.name);
+    return {
+      type:"which", subject:me,
+      photo: IMAGES[me.id],
+      prompt: "Bu silah hangisidir?",
+      hint: `${me.flag} ${me.nameOf}`,
+      options: shuffle([me.name, ...distractors]),
+      correct: me.name,
+      explain: `${me.name}, ${me.year} yılında ${me.nameOf} envanterine girdi.`
+    };
+  }
+  if(style === "parent"){
+    // atası KEŞFEDİLMİŞ ve tanıdığın bir silah seç
+    const candidates = POOL.filter(n => {
+      if(!n.parent) return false;
+      const p = catNodes(n.country, n.cat).find(x=>x.id===n.parent);
+      return p && discovered(p.id);
+    });
+    if(candidates.length === 0) return generateQ(); // fallback
+    const me = candidates[Math.floor(Math.random()*candidates.length)];
+    const parent = catNodes(me.country, me.cat).find(x=>x.id===me.parent);
+    const distractors = pickRandom(POOL.filter(x=>x.id!==me.id && x.id!==parent.id), 3).map(x=>x.name);
+    return {
+      type:"parent", subject:me,
+      photo: IMAGES[me.id],
+      prompt: `${me.name} silahının atası hangisidir?`,
+      hint: `${me.flag} ${me.year}`,
+      options: shuffle([parent.name, ...distractors]),
+      correct: parent.name,
+      explain: `${me.name}, ${parent.name}'in evrimi olarak ${me.year}'te ortaya çıktı.`
+    };
+  }
+  // year
+  const me = POOL[Math.floor(Math.random()*POOL.length)];
+  const yrs = new Set([me.year]);
+  while(yrs.size < 4) yrs.add(me.year + (Math.floor(Math.random()*40)-20));
+  return {
+    type:"year", subject:me,
+    photo: IMAGES[me.id],
+    prompt: `${me.name} hangi yıl hizmete girdi?`,
+    hint: `${me.flag} ${me.nameOf}`,
+    options: shuffle([...yrs].map(String)),
+    correct: String(me.year),
+    explain: `${me.name}, ${me.year} yılında devreye alındı.`
+  };
+}
+
+function renderQuiz(){
+  // dinamik başlık
+  const qTitle = document.getElementById("qTitle");
+  if(qState.focus){
+    qTitle.innerHTML = `<span class="ico">🎯</span> ${qState.focus.name} Çalışması`;
+  } else {
+    qTitle.innerHTML = `<span class="ico">🎯</span> Bilgi Yolu`;
+  }
+
+  if(qState.idx >= qState.total){
+    // bitiş ekranı — focus moduna göre farklı CTA
+    const focus = qState.focus;
+    let ctaHTML = "";
+
+    if(focus){
+      const m = mastery(focus.id);
+      if(m >= 100){
+        // ustalaştı, halef var mı? (aynı kategoride)
+        const sameCatNodes = catNodes(focus.country, focus.cat);
+        const childNodes = sameCatNodes.filter(x=>x.parent===focus.id);
+        const newChild = childNodes.find(x=>!discovered(x.id));
+        if(newChild){
+          ctaHTML = `
+            <div class="unlock">✨ Yeni açıldı: <strong>${newChild.name}</strong></div>
+            <button class="qprimary" onclick="goToNextWeapon('${newChild.id}')">🎯 ${newChild.name}'e Geç</button>
+            <button class="qsec" onclick="goToTree()">🌳 Ağaca Dön</button>
+          `;
+        } else if(childNodes.length){
+          // hepsi discovered, kullanıcı seçmiş olmalı
+          ctaHTML = `
+            <div class="progress-line">★ ${focus.name} ustası oldun</div>
+            <button class="qprimary" onclick="goToTree()">🌳 Ağaca Dön</button>
+          `;
+        } else {
+          // halefi yok (yaprak silah)
+          ctaHTML = `
+            <div class="progress-line">★ Ustalaştın · halef yok (yaprak silah)</div>
+            <button class="qprimary" onclick="goToTree()">🌳 Ağaca Dön</button>
+          `;
+        }
+      } else {
+        // henüz ustalaşmadı
+        const remain = 100 - m;
+        ctaHTML = `
+          <div class="progress-line">${focus.name} ustalığı: <strong>${m}%</strong> · ${remain}% kaldı</div>
+          <button class="qprimary" onclick="startQuiz('${focus.id}')">🔁 Tekrar Çalış</button>
+          <button class="qsec" onclick="goToTree()">🌳 Ağaca Dön</button>
+        `;
+      }
+    } else {
+      ctaHTML = `
+        <button class="qprimary" onclick="startQuiz()">🔁 Yeni Tur</button>
+        <button class="qsec" onclick="goToTree()">🌳 Ağaca Dön</button>
+      `;
+    }
+
+    document.getElementById("qBody").innerHTML = `
+      <div class="qfinish">
+        <div class="big">${qState.score >= qState.total*0.7 ? "🏆" : qState.score >= qState.total*0.4 ? "🎖️" : "💪"}</div>
+        <h3>Tur tamamlandı</h3>
+        <div class="stat">${qState.score} / ${qState.total} doğru · +${qState.score*15} XP</div>
+        ${ctaHTML}
+      </div>`;
+    document.getElementById("qBar").style.width = "100%";
+    document.getElementById("qNum").textContent = `${qState.total} / ${qState.total}`;
+    document.getElementById("qScore").textContent = `${qState.score} doğru`;
+    return;
+  }
+  qState.current = generateQ();
+  qState.answered = false;
+  const q = qState.current;
+  document.getElementById("qBar").style.width = ((qState.idx)/qState.total*100)+"%";
+  document.getElementById("qNum").textContent = `${qState.idx+1} / ${qState.total}`;
+  document.getElementById("qScore").textContent = `${qState.score} doğru`;
+
+  document.getElementById("qBody").innerHTML = `
+    <div class="qcard">
+      <div class="qphoto">${q.photo ? `<img src="${q.photo}" alt=""/>` : '<span style="font-size:32px">🔫</span>'}</div>
+      <div class="qprompt">${q.prompt}</div>
+      <div class="qhint">${q.hint}</div>
+      ${q.options.map(opt=>`<button class="qopt" data-v="${opt.replace(/"/g,'&quot;')}">${opt}</button>`).join("")}
+      <div class="qfeedback" id="qFb"></div>
+    </div>
+  `;
+  document.querySelectorAll("#qBody .qopt").forEach(b=>{
+    b.onclick = ()=> answerQuiz(b.dataset.v, b);
+  });
+}
+
+/* Bitiş ekranı butonları */
+function goToNextWeapon(id){
+  DISCOVERED.add(id);
+  startQuiz(id);
+}
+function goToTree(){
+  screenQuiz.hidden = true;
+  screenCompare.hidden = true;
+  document.querySelectorAll(".nav .item").forEach(el=>{
+    el.classList.toggle("active", el.dataset.screen === "tree");
+  });
+  renderTree();
+}
+
+function answerQuiz(value, btn){
+  if(qState.answered) return;
+  qState.answered = true;
+  const q = qState.current;
+  const ok = (value === q.correct);
+  let masteryMsg = "";
+  if(ok){
+    qState.score++; btn.classList.add("right");
+    const r = bumpMastery(q.subject.id, 10);
+    masteryMsg = `<div style="margin-top:6px;font-size:11.5px"><strong style="color:var(--accent-2)">${q.subject.name}</strong> ustalığı: ${r.before}% → <strong>${r.after}%</strong></div>`;
+    if(r.crossed100){
+      masteryMsg += `<div style="margin-top:4px;font-size:11.5px;color:var(--accent)">🏆 Usta oldun — halefler kilitsiz!</div>`;
+    }
+  } else {
+    btn.classList.add("wrong");
+  }
+  document.querySelectorAll("#qBody .qopt").forEach(b=>{
+    b.disabled = true;
+    if(b.dataset.v === q.correct) b.classList.add("right");
+  });
+  const fb = document.getElementById("qFb");
+  fb.classList.add("show");
+  fb.innerHTML = `${ok ? '<strong>+15 XP · +10% ustalık</strong> · doğru' : '<strong style="color:#ef4444">Yanlış</strong>'} · ${q.explain}
+    ${masteryMsg}
+    <button class="qnext" style="margin-top:10px" onclick="qState.idx++; renderQuiz()">Sonraki ›</button>`;
+}
+
+/* ============================================================
+   COMPARE MODE — Spec Dövüşü (kategori-aware)
+   ============================================================ */
+let cState = null;
+
+/* Stat etiketi/format hesaplayıcı — STAT_DEFS üzerinden */
+function statLabel(catKey, key){
+  const def = STAT_DEFS[catKey] && STAT_DEFS[catKey][key];
+  if(!def) return { k:key, unit:"", higher:true, fmt:v=>v };
+  return {
+    k: def.label,
+    unit: def.unit,
+    higher: def.higher,
+    fmt: v => (v==null||v===0 && key==="rpm") ? "—" : (v + (def.unit?(" "+def.unit):""))
+  };
+}
+function statKeysOf(catKey){
+  return Object.keys(STAT_DEFS[catKey] || {});
+}
+
+/* Senin saflarında savaşacak silah: aktif kategoride, ≥50% ustalık olanlar */
+function pickMyFighter(){
+  const list = ALL_NODES.filter(n => n.cat === activeCat && STATS[n.id] && mastery(n.id) >= 50);
+  if(list.length) return list[Math.floor(Math.random()*list.length)];
+  // fallback: aktif kategoride herhangi biri
+  const fallback = ALL_NODES.filter(n => n.cat === activeCat && STATS[n.id]);
+  return fallback[0] || ALL_NODES.find(n=>STATS[n.id]);
+}
+function pickOppFighter(exclude){
+  // rakip aynı kategoriden seçilir (aksi halde stat'lar uyumsuz olur)
+  const cat = exclude ? exclude.cat : activeCat;
+  const list = ALL_NODES.filter(n => n.cat === cat && STATS[n.id] && (!exclude || n.id !== exclude.id));
+  return list[Math.floor(Math.random()*list.length)];
+}
+function statValue(node, key){
+  if(key==="year") return node.year;
+  return STATS[node.id] ? STATS[node.id][key] : null;
+}
+
+function startCompare(){
+  cState = { you:0, opp:0, round:1, total:5, my:null, theirs:null, picked:null, locked:false };
+  newRound();
+}
+function newRound(){
+  cState.my = pickMyFighter();
+  cState.theirs = pickOppFighter(cState.my);
+  cState.picked = null;
+  cState.locked = false;
+  renderCompare();
+}
+function renderCompare(){
+  document.getElementById("cScore").textContent = `Sen ${cState.you} — ${cState.opp} Rakip`;
+  document.getElementById("cRound").textContent = `El ${cState.round} / ${cState.total}`;
+
+  const my = cState.my, th = cState.theirs;
+
+  if(cState.round > cState.total){
+    const won = cState.you > cState.opp;
+    const tied = cState.you === cState.opp;
+    document.getElementById("cBody").innerHTML = `
+      <div class="qfinish">
+        <div class="big">${won ? "🏆" : tied ? "🤝" : "💪"}</div>
+        <h3>${won ? "Kazandın!" : tied ? "Berabere" : "Bir dahaki sefere"}</h3>
+        <div class="stat">Final: Sen ${cState.you} — ${cState.opp} Rakip · +${cState.you*30} XP</div>
+        <button onclick="startCompare()">Tekrar Oyna</button>
+      </div>`;
+    return;
+  }
+
+  // mevcut dövüşçünün kategorisindeki stat'ları kullan
+  const cat = my.cat || activeCat;
+  const keys = statKeysOf(cat);
+
+  document.getElementById("cBody").innerHTML = `
+    ${cardHTML(my, "you", false)}
+    <div class="cstats" id="cStats">
+      ${keys.map(k=>{
+        const v = statValue(my,k);
+        const lbl = statLabel(cat, k);
+        return `<div class="cstat" data-k="${k}"><span class="k">${lbl.k}</span><span class="v">${lbl.fmt(v)}</span></div>`;
+      }).join("")}
+    </div>
+    <div class="cprompt" id="cPrompt">↑ Bir özellik seç — rakibinle karşılaştır</div>
+    ${cardHTML(th, "opp", true)}
+    <div id="cResultBox"></div>
+  `;
+
+  document.querySelectorAll("#cStats .cstat").forEach(el=>{
+    el.onclick = ()=> pickStat(el.dataset.k);
+  });
+}
+function cardHTML(n, role, hidden){
+  const tag = role==="you" ? "SENİN KARTIN" : "RAKİP KART";
+  return `
+    <div class="ccard ${role==="opp"?"opp":""}" id="card_${role}">
+      <span class="ctag">${tag}</span>
+      <div class="crow ${hidden?"chidden":""}">
+        <div class="cphoto">${IMAGES[n.id]?`<img src="${IMAGES[n.id]}" alt=""/>`:'🔫'}</div>
+        <div class="cinfo">
+          <div class="nm">${hidden?"???":n.name}</div>
+          <div class="yr">${hidden?"":`${DATA[n.country].flag} ${n.year} · ${n.cal}`}</div>
+        </div>
+      </div>
+    </div>`;
+}
+function pickStat(key){
+  if(cState.locked) return;
+  cState.locked = true;
+  cState.picked = key;
+  // open opponent card
+  const oppCard = document.getElementById("card_opp");
+  oppCard.querySelector(".crow").classList.remove("chidden");
+
+  const myV = statValue(cState.my, key);
+  const thV = statValue(cState.theirs, key);
+  const lbl = statLabel(cState.my.cat || activeCat, key);
+
+  document.querySelectorAll("#cStats .cstat").forEach(el=>{
+    el.classList.add("locked");
+    if(el.dataset.k === key) el.classList.add("picked");
+  });
+
+  // mark winner
+  let myWins, tie=false;
+  if(myV === thV){ tie = true; }
+  else if(lbl.higher){ myWins = myV > thV; }
+  else { myWins = myV < thV; }
+
+  const myCard = document.getElementById("card_you");
+  let masteryLine = "";
+  if(!tie && myWins){
+    myCard.classList.add("win"); oppCard.classList.add("lose"); cState.you++;
+    const r = bumpMastery(cState.my.id, 20);
+    masteryLine = `<div style="margin-top:6px;font-size:11.5px;text-align:center"><strong>${cState.my.name}</strong> ustalığı +20% (${r.before}% → <strong>${r.after}%</strong>)${r.crossed100?' · 🏆 Usta!':''}</div>`;
+  } else if(!tie){
+    myCard.classList.add("lose"); oppCard.classList.add("win"); cState.opp++;
+  } else {
+    const r = bumpMastery(cState.my.id, 5);
+    masteryLine = `<div style="margin-top:6px;font-size:11.5px;text-align:center;color:var(--muted)">Berabere · +5% ustalık</div>`;
+  }
+
+  const txt = tie
+    ? `Berabere · ${lbl.k} ${lbl.fmt(myV)}`
+    : (myWins
+       ? `Kazandın! · ${lbl.k}: senin ${lbl.fmt(myV)} > rakip ${lbl.fmt(thV)}`
+       : `Kaybettin · ${lbl.k}: senin ${lbl.fmt(myV)} < rakip ${lbl.fmt(thV)}`);
+
+  document.getElementById("cResultBox").innerHTML = `
+    <div class="cresult ${tie?"tie":(myWins?"win":"lose")}">${txt}</div>
+    ${masteryLine}
+    <button class="cnext" onclick="cState.round++; newRound()">Sonraki El ›</button>
+  `;
+  document.getElementById("cScore").textContent = `Sen ${cState.you} — ${cState.opp} Rakip`;
+  document.getElementById("cPrompt").textContent = "Sonuç ↓";
+}
+
+renderTabs();
+renderCats();
+renderTree();
+</script>
+</body>
+</html>
